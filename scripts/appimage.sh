@@ -15,6 +15,9 @@ STATIC_BUILD=false
 ADDONS=false
 BUILD_TYPE="debug"
 
+unset system_lua
+unset pgo
+
 show_help(){
   echo
   echo "Usage: $0 <OPTIONS>"
@@ -30,6 +33,8 @@ show_help(){
   echo "-v --version VERSION      Specify a version, non whitespace separated string."
   echo "-a --addons               Install 3rd party addons."
   echo "-r --release              Compile in release mode."
+  echo "-O --pgo                  Use profile guided optimizations (pgo)."
+  echo "   --system-lua           Use system provided Lua."
   echo
 }
 
@@ -60,6 +65,14 @@ for i in "$@"; do
       ;;
     -r|--release)
       BUILD_TYPE="release"
+      shift
+      ;;
+    --system-lua)
+      system_lua="-Duse_system_lua=true"
+      shift
+      ;;
+    -O|--pgo)
+      pgo="-Db_pgo=generate"
       shift
       ;;
     -s|--static)
@@ -117,14 +130,23 @@ build_litexl() {
   echo "Build lite-xl..."
   sleep 1
   if [[ $STATIC_BUILD == false ]]; then
-    meson setup --buildtype=$BUILD_TYPE --prefix=/usr ${BUILD_DIR}
+    meson setup --buildtype=$BUILD_TYPE --prefix=/usr $pgo $system_lua ${BUILD_DIR}
   else
     meson setup --wrap-mode=forcefallback \
       --buildtype=$BUILD_TYPE \
       --prefix=/usr \
+      $system_lua \
+      $pgo \
       ${BUILD_DIR}
   fi
   meson compile -C ${BUILD_DIR}
+  if [[ -n $pgo ]]; then
+    cp -r data "${BUILD_DIR}/src"
+    "${BUILD_DIR}/src/lite-xl"
+    meson configure -Db_pgo=use "${BUILD_DIR}"
+    meson compile -C "${BUILD_DIR}"
+    rm -fr "${BUILD_DIR}/data"
+  fi
 }
 
 generate_appimage() {

@@ -26,6 +26,7 @@ show_help() {
   echo "                              macOS: disabled when used with --bundle,"
   echo "                              Windows: Implicit being the only option."
   echo "-r --release                  Compile in release mode."
+  echo "   --system-lua               Use system provided Lua."
   echo "   --cross-platform PLATFORM  Cross compile for this platform."
   echo "                              The script will find the appropriate"
   echo "                              cross file in 'resources/cross'."
@@ -51,6 +52,7 @@ main() {
   local cross_platform
   local cross_arch
   local cross_file
+  local system_lua
 
   local lua_subproject_path
 
@@ -114,6 +116,10 @@ main() {
         cross="true"
         cross_file="$2"
         shift
+        shift
+        ;;
+      --system-lua)
+        system_lua="-Duse_system_lua=true"
         shift
         ;;
       -r|--release)
@@ -191,6 +197,7 @@ main() {
     --buildtype=$build_type \
     --prefix "$prefix" \
     "${cross_file[@]}" \
+    $system_lua \
     $force_fallback \
     $bundle \
     $portable \

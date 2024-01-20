@@ -1,8 +1,19 @@
+#!/bin/bash
+
 CC="${CC:-gcc}"
 CXX="${CXX:-g++}"
-CFLAGS=
-CXXFLAGS=
-LDFLAGS=
+
 BUILD_TYPE=Release
 
-packages=(pcre2 freetype2 sdl2 lua)
+if [[ "$OSTYPE" == "msys" ]]; then
+    # On Windows we use Lua with the utf8 patch
+    packages=(pcre2 freetype2 "sdl2 -threads" "lua -utf8")
+elif [[ "$OSTYPE" == "linux"* || "$OSTYPE" == "freebsd"* ]]; then
+    # On linux opengl and render is not needed
+    packages=(pcre2 freetype2 "sdl2 -threads" "lua")
+else
+    # elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # on macOS we need to enable opengl and render
+    packages=(pcre2 freetype2 "sdl2 -threads -opengl -render" "lua")
+fi
+
