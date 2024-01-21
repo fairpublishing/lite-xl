@@ -176,9 +176,9 @@ main() {
     fi
     export MACOSX_DEPLOYMENT_TARGET="$macos_version_min"
     export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET="$macos_version_min"
-    export CFLAGS="-mmacosx-version-min=$macos_version_min"
-    export CXXFLAGS="-mmacosx-version-min=$macos_version_min"
-    export LDFLAGS="-mmacosx-version-min=$macos_version_min"
+    export CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=$macos_version_min"
+    export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=$macos_version_min"
+    export LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=$macos_version_min"
   fi
 
   rm -rf "${build_dir}"
