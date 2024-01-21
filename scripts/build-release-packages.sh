@@ -34,8 +34,9 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   # We may use the option --pgo below but it doesn't work to run
   # the binary from the build directory when the bundle option
   # is activated.
-  bash scripts/build.sh --bundle --release --system-lua # --pgo
-  bash scripts/package.sh --dmg --release
-  bash scripts/package.sh --addons --dmg --release
+  # We can use --notarize below to with the package script.
+  bash scripts/build.sh --bundle --release --system-lua
+  bash scripts/package.sh --dmg --release --notarize
+  bash scripts/package.sh --addons --dmg --release --notarize
 fi
 

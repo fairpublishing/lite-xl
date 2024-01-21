@@ -29,6 +29,7 @@ show_help() {
   echo "-I --innosetup                Create a InnoSetup package (Windows only)."
   echo "-r --release                  Strip debugging symbols."
   echo "-S --source                   Create a source code package,"
+  echo "   --notarize                 Notarize application on macOS."
   echo "                              including subprojects dependencies."
   echo "   --cross-platform PLATFORM  The platform to package for."
   echo "   --cross-arch ARCH          The architecture to package for."
@@ -75,6 +76,7 @@ main() {
   local innosetup=false
   local release=false
   local source=false
+  local notarize=false
   local cross
   local cross_arch
   local cross_platform
@@ -160,6 +162,10 @@ main() {
         shift
         shift
         ;;
+      --notarize)
+        notarize=true
+        shift
+        ;;
       --debug)
         set -x
         shift
@@ -169,6 +175,14 @@ main() {
         ;;
     esac
   done
+
+  if [ $notarize == true ]; then
+    if [[ -z $APPLE_DEV_APPLICATION || -z $APPLE_APP_PASSWORD || -z $APPLE_ID ]]; then
+      echo "error: to notarize the variables APPLE_DEV_APPLICATION APPLE_APP_PASSWORD and"
+      echo "       APPLE_ID must be all defined."
+      exit 1
+    fi
+  fi
 
   if [[ $addons == true ]]; then
     version="$version-addons"
@@ -264,9 +278,12 @@ main() {
     $stripcmd "${exe_file}"
   fi
 
-  if [[ $bundle == true ]]; then
+  if [[ $bundle == true && $notarize == true ]]; then
     # https://eclecticlight.co/2019/01/17/code-signing-for-the-concerned-3-signing-an-app/
-    codesign --force --deep -s - "${dest_dir}"
+    # codesign --force --deep -s - "${dest_dir}"
+
+    # Fortify the runtime
+    codesign -f -o runtime --deep --timestamp -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" "${dest_dir}"
   fi
 
   echo "Creating a compressed archive ${package_name}"
@@ -286,6 +303,17 @@ main() {
   fi
   if [[ $bundle == true && $dmg == true ]]; then
     source scripts/appdmg.sh "${package_name}"
+
+    if [ $notarize == true ]; then
+      # sign the application
+      codesign -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" --timestamp "${package_name}.dmg"
+
+      echo "Proceed to notarize ?"
+      read ans
+      if [[ "$ans" == "yes" ]]; then
+          xcrun altool --notarize-app --primary-bundle-id "lite-xl-$version" -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}" -t osx -f "${package_name}.dmg"
+      fi
+    fi
   fi
   if [[ $innosetup == true ]]; then
     source scripts/innosetup/innosetup.sh $flags
