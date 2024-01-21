@@ -1,6 +1,12 @@
 #!/bin/bash
 
+if [ ! -z ${LHELPER_ENV_NAME+x} ]; then
+  echo "error: the script should not be used from an activated environment."
+  exit 1
+fi
+
 rm -fr .lhelper
+# We have the build-wayland environment for Wayland builds
 lhelper create build
 source "$(lhelper env-source build)"
 

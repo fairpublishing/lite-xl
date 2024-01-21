@@ -9,8 +9,7 @@ if [[ "$OSTYPE" == "msys" ]]; then
     # On Windows we use Lua with the utf8 patch
     packages=(pcre2 freetype2 "sdl2 -threads" "lua -utf8")
 elif [[ "$OSTYPE" == "linux"* || "$OSTYPE" == "freebsd"* ]]; then
-    # On linux opengl and render is not needed
-    packages=(pcre2 freetype2 "sdl2 -x11 -threads" "lua")
+    packages=(pcre2 freetype2 "sdl2 -wayland -threads -opengl -render" "lua")
 else
     # elif [[ "$OSTYPE" == "darwin"* ]]; then
     # on macOS we need to enable opengl and render
