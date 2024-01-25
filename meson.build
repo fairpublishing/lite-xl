@@ -232,6 +232,8 @@ configure_file(
     install_dir : join_paths(lite_datadir, 'core'),
 )
 
+lite_plugins_includes = include_directories('resources/include')
+
 if not get_option('source-only')
     subdir('src')
     subdir('scripts')

@@ -68,3 +68,11 @@ executable('lite-xl',
     install: true,
     win_subsystem: 'windows',
 )
+
+shared_library('terminal',
+    'plugins/libterminal.c',
+    include_directories: lite_includes + lite_plugins_includes,
+    install_dir : lite_datadir + '/plugins/terminal',
+    install: true
+)
+
