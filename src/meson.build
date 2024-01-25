@@ -69,9 +69,15 @@ executable('lite-xl',
     win_subsystem: 'windows',
 )
 
+lite_plugin_terminal_deps = []
+if host_machine.system() != 'windows'
+    lite_plugin_terminal_deps += cc.find_library('util')
+endif
+
 shared_library('terminal',
     'plugins/libterminal.c',
     include_directories: lite_includes + lite_plugins_includes,
+    dependencies: lite_plugin_terminal_deps,
     install_dir : lite_datadir + '/plugins/terminal',
     install: true
 )
