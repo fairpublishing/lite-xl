@@ -45,19 +45,19 @@ config.plugins.terminal = common.merge({
   -- padding around the edges of the terminal
   padding = { x = 0, y = 0 },
   -- default background color if not explicitly set by the shell
-  background = { common.color "#000000" },
+  background = style.background,
   -- default text color if not explicitly by the shell
-  text = { common.color "#FFFFFF" },
+  text = style.syntax.normal,
   -- show bold text in bright colors
-  bold_text_in_bright_colors = true,
+  bold_text_in_bright_colors = false,
   colors = {
     -- You can customize these without many repercussions.
-    [  0] = { common.color "#000000" }, [  1] = { common.color "#aa0000" }, [  2] = { common.color "#44aa44" }, [  3] = { common.color "#aa5500" }, [  4] = { common.color "#0039aa" },
-    [  5] = { common.color "#aa22aa" }, [  6] = { common.color "#1a92aa" }, [  7] = { common.color "#aaaaaa" }, [  8] = { common.color "#777777" }, [  9] = { common.color "#ff8787" },
-    [ 10] = { common.color "#4ce64c" }, [ 11] = { common.color "#ded82c" }, [ 12] = { common.color "#295fcc" }, [ 13] = { common.color "#cc58cc" }, [ 14] = { common.color "#4ccce6" },
-    [ 15] = { common.color "#ffffff" },
+    [  0] = style.background,           [  1] = style.syntax.keyword2,      [  2] = { common.color "#44aa44" }, [  3] = style.syntax.number,        [  4] = style.syntax["function"]  ,
+    [  5] = style.syntax.keyword,       [  6] = style.caret,                [  7] = style.text,                 [  8] = style.line_number2,         [  9] = { common.color "#ff8787" },
+    [ 10] = { common.color "#4ce64c" }, [ 11] = style.syntax.string,        [ 12] = { common.color "#295fcc" }, [ 13] = { common.color "#cc58cc" }, [ 14] = { common.color "#4ccce6" },
+    [ 15] = style.syntax.normal,
     -- You can't customize these without repercussions.
-    [ 16] = { common.color "#000000" }, [ 17] = { common.color "#00005f" }, [ 18] = { common.color "#000087" }, [ 19] = { common.color "#0000af" },
+    [ 16] = style.background,           [ 17] = { common.color "#00005f" }, [ 18] = { common.color "#000087" }, [ 19] = { common.color "#0000af" },
     [ 20] = { common.color "#0000d7" }, [ 21] = { common.color "#0000ff" }, [ 22] = { common.color "#005f00" }, [ 23] = { common.color "#005f5f" }, [ 24] = { common.color "#005f87" },
     [ 25] = { common.color "#005faf" }, [ 26] = { common.color "#005fd7" }, [ 27] = { common.color "#005fff" }, [ 28] = { common.color "#008700" }, [ 29] = { common.color "#00875f" },
     [ 30] = { common.color "#008787" }, [ 31] = { common.color "#0087af" }, [ 32] = { common.color "#0087d7" }, [ 33] = { common.color "#0087ff" }, [ 34] = { common.color "#00af00" },
