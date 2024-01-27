@@ -44,7 +44,7 @@ config.plugins.terminal = common.merge({
   font = style.code_font,
   bold_font = style.code_font_bold,
   -- padding around the edges of the terminal
-  padding = { x = 0, y = 0 },
+  padding = { x = style.padding.x / 2, y = style.padding.y / 2 },
   -- default background color if not explicitly set by the shell
   background = style.background,
   -- default text color if not explicitly by the shell
