@@ -42,6 +42,7 @@ config.plugins.terminal = common.merge({
   drawer_height = 300,
   -- the default console font. non-monsospace is unsupported
   font = style.code_font,
+  bold_font = style.code_font_bold,
   -- padding around the edges of the terminal
   padding = { x = 0, y = 0 },
   -- default background color if not explicitly set by the shell
@@ -108,7 +109,6 @@ config.plugins.terminal = common.merge({
     [255] = { common.color "#eeeeee" }
   }
 }, config.plugins.terminal)
-if not config.plugins.terminal.bold_font then config.plugins.terminal.bold_font = config.plugins.terminal.font:copy(style.code_font:get_size(), { smoothing = true }) end
 
 
 local TerminalView = View:extend()
