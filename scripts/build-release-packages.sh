@@ -10,6 +10,15 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   python3 -m venv .env
   source .env/bin/activate
   pip install dmgbuild
+  # ask to the user if he wants to notarize the application.
+  # if yes set the notarize variable to "--notarize".
+  read -p "Do you want to notarize the application? (y/n) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    notarize="--notarize"
+  else
+    unset notarize
+  fi
 fi
 
 rm -fr .lhelper
@@ -36,7 +45,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   # is activated.
   # We can use --notarize below to with the package script.
   bash scripts/build.sh --bundle --release --system-lua
-  bash scripts/package.sh --dmg --release --notarize
-  bash scripts/package.sh --addons --dmg --release --notarize
+  bash scripts/package.sh --dmg --release $notarize
+  bash scripts/package.sh --addons --dmg --release $notarize
 fi
 
