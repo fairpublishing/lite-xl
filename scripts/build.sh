@@ -170,11 +170,10 @@ main() {
 
   # arch and platform specific stuff
   if [[ "$platform" == "macos" ]]; then
-    macos_version_min="$MACOSX_DEPLOYMENT_TARGET"
-    export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET="$macos_version_min"
-    export CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=$macos_version_min"
-    export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=$macos_version_min"
-    export LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=$macos_version_min"
+    export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET"
+    #export CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=$macos_version_min"
+    #export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=$macos_version_min"
+    #export LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=$macos_version_min"
   fi
 
   rm -rf "${build_dir}"

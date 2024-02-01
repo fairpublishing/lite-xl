@@ -283,6 +283,10 @@ main() {
     # https://eclecticlight.co/2019/01/17/code-signing-for-the-concerned-3-signing-an-app/
     # codesign --force --deep -s - "${dest_dir}"
 
+    # Sign the executable
+    codesign -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" --timestamp "${exe_file}"
+    # Sign the plugins shared library: the list is not automated
+    codesign -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" --timestamp "${data_dir}/plugins/terminal/libterminal.dylib"
     # Fortify the runtime
     codesign -f -o runtime --deep --timestamp -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" "${dest_dir}"
   fi
@@ -311,13 +315,17 @@ main() {
     fi
 
     if [[ $notarize == true ]]; then
-      # sign the application
+      # sign the application dmg
       codesign -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" --timestamp "${package_name}.dmg"
+
+      codesign -v "${dest_dir}"
 
       echo "Proceed to notarize ?"
       read ans
       if [[ "$ans" == "yes" ]]; then
-          xcrun altool --notarize-app --primary-bundle-id "lite-xl-$version" -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}" -t osx -f "${package_name}.dmg"
+          xcrun altool --notarize-app --primary-bundle-id "lite-xl$version" -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}" -t osx -f "${package_name}.dmg"
+          # to see status of notarization:
+          # xcrun altool --notarization-history 0 -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}"
       fi
     fi
   fi

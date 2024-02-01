@@ -6,12 +6,10 @@ CXX="${CXX:-g++}"
 BUILD_TYPE=Release
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    MACOSX_DEPLOYMENT_TARGET="10.11"
-    if [[ "$(uname -m)" == "arm64" ]]; then
-        MACOSX_DEPLOYMENT_TARGET="11.0"
+    if [ -z ${MACOSX_DEPLOYMENT_TARGET+x} ]; then
+        echo "error: MACOSX_DEPLOYMENT_TARGET is not defined"
+        exit 1
     fi
-    export MACOSX_DEPLOYMENT_TARGET
-
     CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
     CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
     LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
