@@ -92,6 +92,19 @@ get_default_build_dir() {
   echo "build-$platform-$arch"
 }
 
+extract_version() {
+    local -n version="$1"
+    local filename="$2"
+    local line _version
+    while IFS= read -r line; do
+        if [[ $line == *version\ :\ * ]]; then
+            _version=${line#*\'}
+            version=${_version%%\'*}
+            break
+        fi
+    done < "$filename"
+}
+
 if [[ $(get_platform_name) == "UNSUPPORTED-OS" ]]; then
   echo "Error: unknown OS type: \"$OSTYPE\""
   exit 1

@@ -250,6 +250,7 @@ main() {
       dest_dir="Lite XL.app"
       exe_file="$(pwd)/${dest_dir}/Contents/MacOS/lite-xl"
       data_dir="$(pwd)/${dest_dir}/Contents/Resources"
+      sed -i '' "s/LITEXL_MIN_SYS_VERSION/$MACOSX_DEPLOYMENT_TARGET/g" "$(pwd)/${dest_dir}/Contents/Info.plist"
     fi
   fi
 
@@ -304,7 +305,12 @@ main() {
   if [[ $bundle == true && $dmg == true ]]; then
     source scripts/appdmg.sh "${package_name}"
 
-    if [ $notarize == true ]; then
+    if [[ $notarize == true && -z "$version" ]]; then
+      echo "warning: notarization required but version is not set"
+      exit 1
+    fi
+
+    if [[ $notarize == true ]]; then
       # sign the application
       codesign -s "Developer ID Application: ${APPLE_DEV_APPLICATION}" --timestamp "${package_name}.dmg"
 

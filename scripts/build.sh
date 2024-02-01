@@ -170,11 +170,7 @@ main() {
 
   # arch and platform specific stuff
   if [[ "$platform" == "macos" ]]; then
-    macos_version_min="10.11"
-    if [[ "$arch" == "arm64" ]]; then
-      macos_version_min="11.0"
-    fi
-    export MACOSX_DEPLOYMENT_TARGET="$macos_version_min"
+    macos_version_min="$MACOSX_DEPLOYMENT_TARGET"
     export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET="$macos_version_min"
     export CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=$macos_version_min"
     export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=$macos_version_min"

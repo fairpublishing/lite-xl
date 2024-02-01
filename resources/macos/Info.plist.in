@@ -17,7 +17,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.11</string>
+	<string>LITEXL_MIN_SYS_VERSION</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>To access, edit and index your projects.</string>
 	<key>NSDesktopFolderUsageDescription</key>
