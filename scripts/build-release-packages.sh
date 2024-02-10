@@ -23,6 +23,7 @@ if [ -z ${VERSION+x} ]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
+  rm -fr .env
   python3 -m venv .env
   source .env/bin/activate
   pip install dmgbuild
