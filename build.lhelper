@@ -5,16 +5,6 @@ CXX="${CXX:-g++}"
 
 BUILD_TYPE=Release
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    if [ -z ${MACOSX_DEPLOYMENT_TARGET+x} ]; then
-        echo "error: MACOSX_DEPLOYMENT_TARGET is not defined"
-        exit 1
-    fi
-    CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
-    CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
-    LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
-fi
-
 if [[ "$OSTYPE" == "msys" ]]; then
     # On Windows we use Lua with the utf8 patch
     packages=(pcre2 freetype2 "sdl2 -threads -loadso" "lua -utf8")

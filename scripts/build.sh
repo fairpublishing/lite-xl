@@ -145,35 +145,33 @@ main() {
   # if CROSS_ARCH is used, it will be picked up
   cross="${cross:-$CROSS_ARCH}"
   if [[ -n "$cross" ]]; then
-    if [[ -n "$cross_file" ]] && ([[ -z "$cross_arch" ]] || [[ -z "$cross_platform" ]]); then
-      echo "Warning: --cross-platform or --cross-platform not set; guessing it from the filename."
-      # remove file extensions and directories from the path
-      cross_file_name="${cross_file##*/}"
-      cross_file_name="${cross_file_name%%.*}"
-      # cross_platform is the string before encountering the first hyphen
-      if [[ -z "$cross_platform" ]]; then
-        cross_platform="${cross_file_name%%-*}"
-        echo "Warning: Guessing --cross-platform $cross_platform"
-      fi
-      # cross_arch is the string after encountering the first hyphen
-      if [[ -z "$cross_arch" ]]; then
-        cross_arch="${cross_file_name#*-}"
-        echo "Warning: Guessing --cross-arch $cross_arch"
-      fi
-    fi
+    # if [[ -n "$cross_file" ]] && ([[ -z "$cross_arch" ]] || [[ -z "$cross_platform" ]]); then
+    #   echo "Warning: --cross-platform or --cross-platform not set; guessing it from the filename."
+    #   # remove file extensions and directories from the path
+    #   cross_file_name="${cross_file##*/}"
+    #   cross_file_name="${cross_file_name%%.*}"
+    #   # cross_platform is the string before encountering the first hyphen
+    #   if [[ -z "$cross_platform" ]]; then
+    #     cross_platform="${cross_file_name%%-*}"
+    #     echo "Warning: Guessing --cross-platform $cross_platform"
+    #   fi
+    #   # cross_arch is the string after encountering the first hyphen
+    #   if [[ -z "$cross_arch" ]]; then
+    #     cross_arch="${cross_file_name#*-}"
+    #     echo "Warning: Guessing --cross-arch $cross_arch"
+    #   fi
+    # fi
     platform="${cross_platform:-$platform}"
     arch="${cross_arch:-$arch}"
-    cross_file=("--cross-file" "${cross_file:-resources/cross/$platform-$arch.txt}")
+    # cross_file=("--cross-file" "${cross_file:-resources/cross/$platform-$arch.txt}")
     # reload build_dir because platform and arch might change
     build_dir="$(get_default_build_dir "$platform" "$arch")"
   fi
 
   # arch and platform specific stuff
   if [[ "$platform" == "macos" ]]; then
-    export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET"
-    #export CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=$macos_version_min"
-    #export CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=$macos_version_min"
-    #export LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=$macos_version_min"
+    macos_version_min="$MACOSX_DEPLOYMENT_TARGET"
+    export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET="$macos_version_min"
   fi
 
   rm -rf "${build_dir}"

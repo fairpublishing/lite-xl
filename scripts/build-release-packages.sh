@@ -38,6 +38,29 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   fi
 fi
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  read -p "Enter CPU target architecture (arm64/x86-64): " ARCH
+  if [[ "$ARCH" == "x86-64" ]]; then
+    export CMAKE_OSX_ARCHITECTURES="x86_64" CPU_TYPE="x86-64" CPU_TARGET="x86-64" \
+    CC="gcc -arch x86_64" CXX="g++ -arch x86_64" \
+    OBJC="gcc -arch x86_64" OBJCXX="g++ -arch x86_64"
+  elif [[ "$ARCH" == "arm64" ]]; then
+    export CMAKE_OSX_ARCHITECTURES="arm64" CPU_TYPE="arm64" CPU_TARGET="arm64" \
+    CC="gcc -arch arm64" CXX="g++ -arch arm64" \
+    OBJC="gcc -arch arm64" OBJCXX="g++ -arch arm64"
+  else
+    echo "Invalid architecture. Please enter either arm64 or x86-64."
+    exit 1
+  fi
+  export MACOSX_DEPLOYMENT_TARGET="10.11"
+  if [[ "$ARCH" == "arm64" ]]; then
+      MACOSX_DEPLOYMENT_TARGET="11.0"
+  fi
+  CFLAGS="${CFLAGS:+$CFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+  CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+  LDFLAGS="${LDFLAGS:+$LDFLAGS }-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+fi
+
 rm -fr .lhelper
 # We have the build-wayland environment for Wayland builds
 lhelper create build
@@ -61,8 +84,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   # the binary from the build directory when the bundle option
   # is activated.
   # We can use --notarize below to with the package script.
-  bash scripts/build.sh --bundle --release --system-lua
-  bash scripts/package.sh --version "$VERSION" --dmg --release $notarize
-  bash scripts/package.sh --version "$VERSION" --addons --dmg --release $notarize
+  bash scripts/build.sh --bundle --release --system-lua --cross-arch $ARCH
+  bash scripts/package.sh --version "$VERSION" --dmg --release --cross-arch $ARCH $notarize
+  bash scripts/package.sh --version "$VERSION" --addons --dmg --release --cross-arch $ARCH $notarize
 fi
 
