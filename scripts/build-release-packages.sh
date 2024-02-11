@@ -84,8 +84,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   # the binary from the build directory when the bundle option
   # is activated.
   # We can use --notarize below to with the package script.
-  bash scripts/build.sh --bundle --release --system-lua --cross-arch $ARCH
-  bash scripts/package.sh --version "$VERSION" --dmg --release --cross-arch $ARCH $notarize
-  bash scripts/package.sh --version "$VERSION" --addons --dmg --release --cross-arch $ARCH $notarize
+  bash scripts/build.sh --bundle --release --system-lua --arch $ARCH
+  bash scripts/package.sh --version "$VERSION" --dmg --release --arch $ARCH $notarize
+  bash scripts/package.sh --version "$VERSION" --addons --dmg --release --arch $ARCH $notarize
 fi
 

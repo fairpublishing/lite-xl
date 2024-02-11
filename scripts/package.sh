@@ -31,8 +31,7 @@ show_help() {
   echo "-S --source                   Create a source code package,"
   echo "   --notarize                 Notarize application on macOS."
   echo "                              including subprojects dependencies."
-  echo "   --cross-platform PLATFORM  The platform to package for."
-  echo "   --cross-arch ARCH          The architecture to package for."
+  echo "   --arch ARCH                CPU architecture to identify build directory and name packages."
   echo
 }
 
@@ -77,9 +76,6 @@ main() {
   local release=false
   local source=false
   local notarize=false
-  local cross
-  local cross_arch
-  local cross_platform
 
   # store the current flags to easily pass them to appimage script
   local flags="$@"
@@ -150,15 +146,9 @@ main() {
         addons=true
         shift
         ;;
-      --cross-platform)
-        cross=true
-        cross_platform="$2"
-        shift
-        shift
-        ;;
-      --cross-arch)
-        cross=true
-        cross_arch="$2"
+      --arch)
+        arch="$2"
+        build_dir="$(get_default_build_dir "$platform" "$arch")"
         shift
         shift
         ;;
@@ -189,12 +179,6 @@ main() {
   fi
 
   if [[ -n $1 ]]; then show_help; exit 1; fi
-
-  if [[ -n "$cross" ]]; then
-    platform="${cross_platform:-$platform}"
-    arch="${cross_arch:-$arch}"
-    build_dir="$(get_default_build_dir "$platform" "$arch")"
-  fi
 
   # The source package doesn't require a previous build,
   # nor the following install step, so run it now.

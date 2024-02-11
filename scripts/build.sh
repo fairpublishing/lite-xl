@@ -27,19 +27,12 @@ show_help() {
   echo "                              Windows: Implicit being the only option."
   echo "-r --release                  Compile in release mode."
   echo "   --system-lua               Use system provided Lua."
-  echo "   --cross-platform PLATFORM  Cross compile for this platform."
-  echo "                              The script will find the appropriate"
-  echo "                              cross file in 'resources/cross'."
-  echo "   --cross-arch ARCH          Cross compile for this architecture."
-  echo "                              The script will find the appropriate"
-  echo "                              cross file in 'resources/cross'."
-  echo "   --cross-file CROSS_FILE    Cross compile with the given cross file."
+  echo "   --arch ARCH                CPU architecture to name build directory."
   echo
 }
 
 main() {
   local platform="$(get_platform_name)"
-  local arch="$(get_platform_arch)"
   local build_dir="$(get_default_build_dir)"
   local build_type="debug"
   local prefix=/
@@ -48,10 +41,6 @@ main() {
   local portable
   local pgo
   local patch_lua
-  local cross
-  local cross_platform
-  local cross_arch
-  local cross_file
   local system_lua
 
   local lua_subproject_path
@@ -100,21 +89,9 @@ main() {
         patch_lua="true"
         shift
         ;;
-      --cross-arch)
-        cross="true"
-        cross_arch="$2"
-        shift
-        shift
-        ;;
-      --cross-platform)
-        cross="true"
-        cross_platform="$2"
-        shift
-        shift
-        ;;
-      --cross-file)
-        cross="true"
-        cross_file="$2"
+      --arch)
+        # if the arch is explicitly given we use it to name the build_dir
+        build_dir="$(get_default_build_dir "$platform" "$2")"
         shift
         shift
         ;;
@@ -142,32 +119,6 @@ main() {
       portable=""
   fi
 
-  # if CROSS_ARCH is used, it will be picked up
-  cross="${cross:-$CROSS_ARCH}"
-  if [[ -n "$cross" ]]; then
-    # if [[ -n "$cross_file" ]] && ([[ -z "$cross_arch" ]] || [[ -z "$cross_platform" ]]); then
-    #   echo "Warning: --cross-platform or --cross-platform not set; guessing it from the filename."
-    #   # remove file extensions and directories from the path
-    #   cross_file_name="${cross_file##*/}"
-    #   cross_file_name="${cross_file_name%%.*}"
-    #   # cross_platform is the string before encountering the first hyphen
-    #   if [[ -z "$cross_platform" ]]; then
-    #     cross_platform="${cross_file_name%%-*}"
-    #     echo "Warning: Guessing --cross-platform $cross_platform"
-    #   fi
-    #   # cross_arch is the string after encountering the first hyphen
-    #   if [[ -z "$cross_arch" ]]; then
-    #     cross_arch="${cross_file_name#*-}"
-    #     echo "Warning: Guessing --cross-arch $cross_arch"
-    #   fi
-    # fi
-    platform="${cross_platform:-$platform}"
-    arch="${cross_arch:-$arch}"
-    # cross_file=("--cross-file" "${cross_file:-resources/cross/$platform-$arch.txt}")
-    # reload build_dir because platform and arch might change
-    build_dir="$(get_default_build_dir "$platform" "$arch")"
-  fi
-
   # arch and platform specific stuff
   if [[ "$platform" == "macos" ]]; then
     macos_version_min="$MACOSX_DEPLOYMENT_TARGET"
@@ -189,7 +140,6 @@ main() {
   CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS meson setup \
     --buildtype=$build_type \
     --prefix "$prefix" \
-    "${cross_file[@]}" \
     $system_lua \
     $force_fallback \
     $bundle \
