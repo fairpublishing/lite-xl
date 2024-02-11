@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 if [ ! -e "src/api/api.h" ]; then
   echo "Please run this script from the root directory of Lite XL."
