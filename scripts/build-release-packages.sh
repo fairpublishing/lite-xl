@@ -7,14 +7,6 @@ fi
 
 source scripts/common.sh
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    MACOSX_DEPLOYMENT_TARGET="10.11"
-    if [[ "$(uname -m)" == "arm64" ]]; then
-        MACOSX_DEPLOYMENT_TARGET="11.0"
-    fi
-    export MACOSX_DEPLOYMENT_TARGET
-fi
-
 unset VERSION
 extract_version VERSION meson.build
 if [ -z ${VERSION+x} ]; then
