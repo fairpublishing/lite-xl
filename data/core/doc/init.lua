@@ -88,6 +88,11 @@ end
 
 function Doc:reload()
   if self.filename then
+    -- Remove highlighter syntax thread and create a new highlighter object.
+    -- Otherwise the highlighter thread may be inside its execution loop and
+    -- raise errors.
+    core.threads[self.highlighter] = nil
+    self.highlighter = Highlighter(self)
     local sel = { self:get_selection() }
     self:load(self.filename)
     self:clean()
