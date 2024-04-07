@@ -54,17 +54,28 @@ local function reload_doc_watch(doc)
   local known_content
   local iter = 0
   local start_time = system.get_time()
-  local max_iter = 6
+  local max_iter = 5
+  local pending_reload = false
+
   while iter <= max_iter do
     local fp = io.open(doc.abs_filename, "rb")
     local new_content = fp and fp:read("*a")
-    if new_content and new_content ~= known_content then
-      -- reading file was successfull and content has changed: reload the doc and
-      -- update the known content we store.
-      reload_doc(doc)
-      known_content = new_content
-      start_time = system.get_time()
-      iter = 0
+    if new_content then
+      if new_content ~= known_content then
+        -- reading file was successful and content has changed: save the new content,
+        -- set the pending_reload flag and restart the watching
+        pending_reload = true
+        known_content = new_content
+        start_time = system.get_time()
+        iter = 0
+      else
+        -- we got a successful reading of the file content and the content was the
+        -- same since the last reading:
+        if pending_reload then
+          reload_doc(doc)
+          pending_reload = false
+        end
+      end
     end
     local now = system.get_time()
     local new_time
@@ -73,7 +84,12 @@ local function reload_doc_watch(doc)
       iter = iter + 1
       new_time = start_time + wait_base_time * math.pow(2, iter)
     until new_time > now
-    coroutine.yield(new_time - now)
+    -- if pending_reload is true we yield "false" to ask the scheduler to run again without
+    -- waiting.
+    coroutine.yield(not pending_reload and new_time - now)
+  end
+  if pending_reload then
+    reload_doc(doc)
   end
 end
 
