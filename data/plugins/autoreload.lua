@@ -40,7 +40,7 @@ local function reload_doc(doc)
   doc:reload()
   update_time(doc)
   core.redraw = true
-  core.log_quiet("Auto-reloaded doc \"%s\"", doc.filename)
+  core.log("Auto-reloaded doc \"%s\"", doc.filename)
 end
 
 -- thread function to watch a file for a period of time for changes in
