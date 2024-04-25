@@ -311,15 +311,9 @@ main() {
       echo "Proceed to notarize ?"
       read ans
       if [[ "$ans" == "yes" ]]; then
-          xcrun altool --notarize-app --primary-bundle-id "lite-xl$version" -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}" -t osx -f "${package_name}.dmg"
+          xcrun notarytool submit --apple-id "${APPLE_ID}" --team-id "${APPLE_TEAM_ID}" --password "${APPLE_APP_PASSWORD}" --wait "${package_name}.dmg"
           # to see status of notarization:
-          # xcrun altool --notarization-history 0 -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}"
-          # to see the log in case of failed notarization:
-          # xcrun altool --notarization-info <request-identifier> -u "${APPLE_ID}" -p "${APPLE_APP_PASSWORD}"
-          # To use notarytool:
-          # xcrun notarytool submit "${package_name}.dmg" --keychain-profile "YourKeychainProfile" --wait
-          # Create before a Keychain profile with the command:
-          # xcrun notarytool store-credentials "YourProfileName" --apple-id your_apple_id@example.com --team-id YOUR_TEAM_ID
+          # xcrun notarytool history --apple-id "${APPLE_ID}" --team-id "${APPLE_TEAM_ID}" --password "${APPLE_APP_PASSWORD}"
       fi
     fi
   fi
