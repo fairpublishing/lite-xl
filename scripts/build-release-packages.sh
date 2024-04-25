@@ -37,7 +37,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     CC="gcc -arch x86_64" CXX="g++ -arch x86_64" \
     OBJC="gcc -arch x86_64" OBJCXX="g++ -arch x86_64"
   elif [[ "$ARCH" == "arm64" ]]; then
-    export CMAKE_OSX_ARCHITECTURES="arm64" CPU_TYPE="arm64" CPU_TARGET="arm64" \
+    export CMAKE_OSX_ARCHITECTURES="arm64" CPU_TYPE="arm64" CPU_TARGET="armv8" \
     CC="gcc -arch arm64" CXX="g++ -arch arm64" \
     OBJC="gcc -arch arm64" OBJCXX="g++ -arch arm64"
   else
