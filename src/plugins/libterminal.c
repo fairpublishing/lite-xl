@@ -285,7 +285,23 @@ static void terminal_input(terminal_t* terminal, const char* str, int len) {
   #ifdef _WIN32
     WriteFile(terminal->topty, str, len, NULL, NULL);
   #else
-    write(terminal->master, str, len);
+    ssize_t ret;
+    int total_written = 0;
+
+    while (total_written < len) {
+        ret = write(terminal->master, str + total_written, len - total_written);
+        if (ret == -1) {
+            if (errno == EINTR) {
+                // Interrupted by signal, try again
+                continue;
+            } else {
+                // Do not really know how to treat properly a fail there.
+                perror("write failed");
+                return;
+            }
+        }
+        total_written += ret;
+    }
   #endif
 }
 
