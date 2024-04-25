@@ -90,7 +90,21 @@ static int font_set_render_options(RenFont* font) {
   if (font->antialiasing == FONT_ANTIALIASING_NONE)
     return FT_RENDER_MODE_MONO;
   if (font->antialiasing == FONT_ANTIALIASING_SUBPIXEL) {
-    unsigned char weights[] = { 0x10, 0x40, 0x70, 0x40, 0x10 } ;
+    /**************************************************************************
+     * Some conventional weights are:
+     *  { 1./3., 2./9., 1./9. } => { 0x1d, 0x39, 0x54, 0x39, 0x1d };
+     *  but previous versions of Lite XL, using the AGG library, was using:
+     *  { 0.448, 0.184, 0.092 } => { 0x18, 0x2f, 0x72, 0x2f, 0x18 };
+     *  where the values where manually adjusted on a LCD screen to look better.
+     *
+     *  Adam Harrison was using: { 0x10, 0x40, 0x70, 0x40, 0x10 } but they gave
+     *  color fringes in my LCD screen, with my perception (Francesco).
+     *
+     *  The standard values of Freetype2 are:
+     *  FT_LCD_FILTER_DEFAULT { 0x08 0x4D 0x56 0x4D 0x08 }
+     *  FT_LCD_FILTER_LIGHT { 0x00 0x55 0x56 0x55 0x00 }
+     */
+    unsigned char weights[] = { 0x18, 0x2f, 0x72, 0x2f, 0x18 };
     switch (font->hinting) {
       case FONT_HINTING_NONE:   FT_Library_SetLcdFilter(library, FT_LCD_FILTER_NONE); break;
       case FONT_HINTING_SLIGHT:
