@@ -59,7 +59,11 @@ local function reload_doc_watch(doc)
 
   while iter <= max_iter do
     local fp = io.open(doc.abs_filename, "rb")
-    local new_content = fp and fp:read("*a")
+    local new_content
+    if fp then
+      new_content = fp:read("*a")
+      fp:close()
+    end
     if new_content then
       if new_content ~= known_content then
         -- reading file was successful and content has changed: save the new content,
