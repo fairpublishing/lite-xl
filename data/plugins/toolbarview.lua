@@ -79,12 +79,13 @@ end
 
 function ToolbarView:draw()
   if not self.visible then return end
-  self:draw_background(style.background2)
+  self:set_surface_for("toolbar", self.position.x, self.position.y, self.size.x, self.size.y, style.background2)
 
   for item, x, y, w, h in self:each_item() do
     local color = item == self.hovered_item and command.is_valid(item.command) and style.text or style.dim
     common.draw_text(self.toolbar_font, color, item.symbol, nil, x, y, 0, h)
   end
+  self:present_surfaces()
 end
 
 

@@ -7,6 +7,8 @@ local translate = require "core.doc.translate"
 local ime = require "core.ime"
 local View = require "core.view"
 
+local TILE_CHARACTERS, TILE_LINES = 80, 40
+
 ---@class core.docview : core.view
 ---@field super core.view
 local DocView = View:extend()
@@ -21,6 +23,125 @@ local function move_to_line_offset(dv, line, col, offset)
   xo.line = line + offset
   xo.col = dv:get_x_offset_col(line + offset, xo.offset)
   return xo.line, xo.col
+end
+
+
+function DocView:get_content_body_offset()
+  local x, y = self:get_content_offset()
+  return x + self:get_gutter_width(), y + style.padding.y
+end
+
+function DocView:get_tile_indexes(x, y)
+  local h = self.tiles_metric.line_height * TILE_LINES
+  local w = self.tiles_metric.char_width * TILE_CHARACTERS
+  local x_o, y_o = self:get_content_body_offset()
+  return math.floor((x - x_o) / w) + 1, math.floor((y - y_o) / h) + 1
+end
+
+
+function DocView:get_tile_size()
+  return self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+end
+
+
+-- return true if text is too far-off in a tile on the right
+function DocView:draw_line_content_text(font, text, x, y, color)
+  local x_o, y_o = self:get_content_body_offset()
+  local tile_w, tile_h = self:get_tile_size()
+  local tile_i, tile_j = self:get_tile_indexes(x, y)
+
+  if tile_j < 1 then return x, false end
+
+  -- compute x_tile as the x coordinate of the left border of the tile
+  local x_tile = x_o + tile_w * (tile_i - 1)
+  local x_rlimit = self.position.x + self.size.x
+
+  local x_text_end
+  while x_tile < x_rlimit and (not x_text_end or x_tile < x_text_end) do
+    if x_tile + tile_w > self.position.x then
+      -- the tile is visible on the screen: get its surface and draw on it
+      if tile_i > 0 then
+        self:surface_for_content(tile_i, tile_j)
+        x_text_end = renderer.draw_text(font, text, x, y, color)
+      end
+    end
+    x_tile = x_tile + tile_w
+    tile_i = tile_i + 1
+  end
+
+  return x_text_end, x_tile >= x_rlimit
+end
+
+
+function DocView:draw_line_content_rect(x, y, w, h, color)
+  local x_o, y_o = self:get_content_body_offset()
+  local tile_w, tile_h = self:get_tile_size()
+  local tile_i, tile_j = self:get_tile_indexes(x, y)
+
+  -- compute x_tile_s as the x coordinate of the left border of the tile
+  local x_tile = x_o + tile_w * (tile_i - 1)
+
+  while x_tile < self.position.x + self.size.x and x_tile < x + w do
+    if x_tile + tile_w > self.position.x then
+      -- the tile is visible on the screen: get its surface and draw on it
+      self:surface_for_content(tile_i, tile_j)
+      renderer.draw_rect(x, y, w, h, color)
+    end
+    x_tile = x_tile + tile_w
+    tile_i = tile_i + 1
+  end
+end
+
+
+-- We provide a surface to draw the content (document's text body) at the given tile
+-- coordinates. We ensure the surface has the background set since the beginning.
+function DocView:surface_for_content(tile_i, tile_j)
+  local x_o, y_o = self:get_content_body_offset()
+  local w, h = self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+  local x, y = x_o + (tile_i - 1) * w, y_o + (tile_j - 1) * h
+
+  -- identify the list of surfaces for the column identified by tile_i
+  local column_surfaces = self.content_surfaces[tile_i]
+  if not column_surfaces then
+    column_surfaces = { }
+    self.content_surfaces[tile_i] = column_surfaces
+  end
+
+  local surface = self.surface_from_list(column_surfaces, tile_j, x, y, w, h)
+  -- FIXME: it can be expensive to generate this id string every time
+  local tile_id = string.format("c %d %d", tile_i, tile_j)
+  self:set_surface_to_draw(surface, tile_id, style.background)
+end
+
+
+function DocView:surface_for_gutter(tile_j)
+  local _, y_o = self:get_content_offset()
+  local x_o = common.round(self.position.x)
+  local w, h = self.tiles_metric.gutter_width, self.tiles_metric.line_height * TILE_LINES
+  local x, y = x_o, y_o + (tile_j - 1) * h
+  local surface = self.surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
+  local tile_id = string.format("g %d", tile_j)
+  self:set_surface_to_draw(surface, tile_id, style.background)
+end
+
+
+function DocView:setup_tiles_for_drawing()
+  local new_lh = self:get_line_height()
+  local new_cw = math.ceil(self:get_font():get_width(' '))
+  local new_gw, gpad = self:get_gutter_width()
+  -- FIXME: include also the surface scale here
+
+  if new_lh ~= self.tiles_metric.line_height or new_cw ~= self.tiles_metric.char_width then
+    self.content_surfaces = { }
+    self.gutter_surfaces = { }
+  elseif new_gw ~= self.tiles_metric.gutter_width then
+    self.gutter_surfaces = { }
+  end
+  self.tiles_metric.line_height  = new_lh
+  self.tiles_metric.char_width   = new_cw
+  self.tiles_metric.gutter_width = new_gw
+
+  self.surface_to_draw = { }
 end
 
 
@@ -64,6 +185,9 @@ function DocView:new(doc)
   self.ime_selection = { from = 0, size = 0 }
   self.ime_status = false
   self.hovering_gutter = false
+  self.tiles_metric = { line_height = 0, char_width = 0, gutter_width = 0 }
+  self.content_surfaces = { }
+  self.gutter_surfaces = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
   self.h_scrollbar:set_forced_status(config.force_scrollbar_status)
 end
@@ -140,16 +264,16 @@ end
 
 
 function DocView:get_line_screen_position(line, col)
-  local x, y = self:get_content_offset()
+  local x, y = self:get_content_body_offset()
   local lh = self:get_line_height()
-  local gw = self:get_gutter_width()
-  y = y + (line-1) * lh + style.padding.y
+  y = y + (line-1) * lh
   if col then
-    return x + gw + self:get_col_x_offset(line, col), y
+    return x + self:get_col_x_offset(line, col), y
   else
-    return x + gw, y
+    return x, y
   end
 end
+
 
 function DocView:get_line_text_y_offset()
   local lh = self:get_line_height()
@@ -244,9 +368,8 @@ function DocView:scroll_to_line(line, ignore_if_visible, instant)
   local min, max = self:get_visible_line_range()
   if not (ignore_if_visible and line > min and line < max) then
     local x, y = self:get_line_screen_position(line)
-    local ox, oy = self:get_content_offset()
     local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
-    self.scroll.to.y = math.max(0, y - oy - (self.size.y - scroll_h) / 2)
+    self.scroll.to.y = math.max(0, y - (self.size.y - scroll_h) / 2)
     if instant then
       self.scroll.y = self.scroll.to.y
     end
@@ -429,9 +552,13 @@ function DocView:update()
 end
 
 
-function DocView:draw_line_highlight(x, y)
-  local lh = self:get_line_height()
-  renderer.draw_rect(x, y, self.size.x, lh, style.line_highlight)
+function DocView:draw_line_highlight(y)
+  local gw = self.tiles_metric.gutter_width
+  local tile_w = self:get_tile_size()
+  local x = self:get_content_body_offset()
+  local w = math.ceil((self.scroll.x + self.size.x - gw) / tile_w) * tile_w
+  local h = self.tiles_metric.line_height
+  self:draw_line_content_rect(x, y, w, h, style.line_highlight)
 end
 
 
@@ -444,20 +571,22 @@ function DocView:draw_line_text(line, x, y)
   if string.sub(tokens[tokens_count], -1) == "\n" then
     last_token = tokens_count - 1
   end
+
+  local is_off_screen_right
   for tidx, type, text in self.doc.highlighter:each_token(line) do
     local color = style.syntax[type]
     local font = style.syntax_fonts[type] or default_font
     -- do not render newline, fixes issue #1164
     if tidx == last_token then text = text:sub(1, -2) end
-    tx = renderer.draw_text(font, text, tx, ty, color)
-    if tx > self.position.x + self.size.x then break end
+    tx, is_off_screen_right = self:draw_line_content_text(font, text, tx, ty, color)
+    if is_off_screen_right then break end
   end
   return self:get_line_height()
 end
 
 function DocView:draw_caret(x, y)
-    local lh = self:get_line_height()
-    renderer.draw_rect(x, y, style.caret_width, lh, style.caret)
+    local w, h = style.caret_width, self.tiles_metric.line_height
+    self:set_surface_for("cursor", x, y, w, h, style.caret)
 end
 
 function DocView:draw_line_body(line, x, y)
@@ -479,11 +608,11 @@ function DocView:draw_line_body(line, x, y)
     end
   end
   if draw_highlight and core.active_view == self then
-    self:draw_line_highlight(x + self.scroll.x, y)
+    self:draw_line_highlight(y)
   end
 
   -- draw selection if it overlaps this line
-  local lh = self:get_line_height()
+  local lh = self.tiles_metric.line_height
   for lidx, line1, col1, line2, col2 in self.doc:get_selections(true) do
     if line >= line1 and line <= line2 then
       local text = self.doc.lines[line]
@@ -492,7 +621,7 @@ function DocView:draw_line_body(line, x, y)
       local x1 = x + self:get_col_x_offset(line, col1)
       local x2 = x + self:get_col_x_offset(line, col2)
       if x1 ~= x2 then
-        renderer.draw_rect(x1, y, x2 - x1, lh, style.selection)
+        self:draw_line_content_rect(x1, y, x2 - x1, lh, style.selection)
       end
     end
   end
@@ -511,7 +640,9 @@ function DocView:draw_line_gutter(line, x, y, width)
     end
   end
   x = x + style.padding.x
-  local lh = self:get_line_height()
+  local lh = self.tiles_metric.line_height
+  local _, tile_j = self:get_tile_indexes(x, y)
+  self:surface_for_gutter(tile_j)
   common.draw_text(self:get_font(), color, line, "right", x, y, width, lh)
   return lh
 end
@@ -520,11 +651,14 @@ end
 function DocView:draw_ime_decoration(line1, col1, line2, col2)
   local x, y = self:get_line_screen_position(line1)
   local line_size = math.max(1, SCALE)
-  local lh = self:get_line_height()
+  local lh = self.tiles_metric.line_height
 
   -- Draw IME underline
   local x1 = self:get_col_x_offset(line1, col1)
   local x2 = self:get_col_x_offset(line2, col2)
+  -- FIXME: we have a problem here: we need to allocate a surface to draw IME
+  --        stuff but I don't know how large it need to get.
+  -- local surface = self:surface_for("ime", ???)
   renderer.draw_rect(x + math.min(x1, x2), y + lh - line_size, math.abs(x1 - x2), line_size, style.text)
 
   -- Draw IME selection
@@ -549,7 +683,8 @@ function DocView:draw_overlay()
     for _, line1, col1, line2, col2 in self.doc:get_selections() do
       if line1 >= minline and line1 <= maxline
       and system.window_has_focus() then
-        if ime.editing then
+        -- FIXME: bring back IME decorations
+        if false and ime.editing then
           self:draw_ime_decoration(line1, col1, line2, col2)
         else
           if config.disable_blink
@@ -562,13 +697,39 @@ function DocView:draw_overlay()
   end
 end
 
+
 function DocView:draw()
-  self:draw_background(style.background)
+  self:setup_tiles_for_drawing()
   local _, indent_size = self.doc:get_indent_info()
   self:get_font():set_tab_size(indent_size)
 
-  local minline, maxline = self:get_visible_line_range()
-  local lh = self:get_line_height()
+  local visible_minline, visible_maxline = self:get_visible_line_range()
+  local lh = self.tiles_metric.line_height
+
+  -- Compute minlines and maxlines rounded in a way to complete the corresponding
+  -- tiles.
+  -- Compute first min and max tile_i, j indexes corresponding to tiles visible
+  -- on the screen.
+  -- TODO: computations befor for min/max tile can be done with a single function
+  -- call.
+  local min_tile_j = math.floor((visible_minline - 1) / TILE_LINES)
+  local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES + 1)
+  local min_tile_i = self:get_tile_indexes(self.position.x, 0)
+  local max_tile_i = self:get_tile_indexes(self.position.x + self.size.x, 0)
+  local minline = math.max(1, min_tile_j * TILE_LINES + 1)
+  local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
+
+  if min_tile_j <= 1 then
+    local x_o, y_o = self:get_content_offset()
+    self:set_surface_for("ypad", x_o, y_o, self.size.x, style.padding.y, style.background)
+  end
+
+  -- Ensure surfaces visible on the screen are "presented" to be drawn
+  for tile_j = min_tile_j + 1, max_tile_j + 1 do
+    for tile_i = min_tile_i, max_tile_i do
+      self:surface_for_content(tile_i, tile_j)
+    end
+  end
 
   local x, y = self:get_line_screen_position(minline)
   local gw, gpad = self:get_gutter_width()
@@ -588,6 +749,7 @@ function DocView:draw()
   core.pop_clip_rect()
 
   self:draw_scrollbar()
+  self:present_surfaces()
 end
 
 

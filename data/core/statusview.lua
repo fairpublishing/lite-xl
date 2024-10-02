@@ -1100,7 +1100,7 @@ end
 function StatusView:draw()
   if not self.visible and self.size.y <= 0 then return end
 
-  self:draw_background(style.background2)
+  self:set_surface_for("statusbar", self.position.x, self.position.y, self.size.x, self.size.y, style.background2)
 
   if self.message and system.get_time() <= self.message_timeout then
     self:draw_items(self.message, false, 0, self.size.y)
@@ -1167,6 +1167,7 @@ function StatusView:draw()
       end
     end
   end
+  self:present_surfaces()
 end
 
 return StatusView
