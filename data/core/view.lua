@@ -4,48 +4,6 @@ local common = require "core.common"
 local Object = require "core.object"
 local Scrollbar = require "core.scrollbar"
 
----@class core.view.position
----@field x number
----@field y number
-
----@class core.view.scroll
----@field x number
----@field y number
----@field to core.view.position
-
----@class core.view.thumbtrack
----@field thumb number
----@field track number
-
----@class core.view.thumbtrackwidth
----@field thumb number
----@field track number
----@field to core.view.thumbtrack
-
----@class core.view.scrollbar
----@field x core.view.thumbtrack
----@field y core.view.thumbtrack
----@field w core.view.thumbtrackwidth
----@field h core.view.thumbtrack
-
----@alias core.view.cursor "'arrow'" | "'ibeam'" | "'sizeh'" | "'sizev'" | "'hand'"
-
----@alias core.view.mousebutton "'left'" | "'right'"
-
----@alias core.view.context "'application'" | "'session'"
-
----Base view.
----@class core.view : core.object
----@field context core.view.context
----@field super core.object
----@field position core.view.position
----@field size core.view.position
----@field scroll core.view.scroll
----@field cursor core.view.cursor
----@field scrollable boolean
----@field v_scrollbar core.scrollbar
----@field h_scrollbar core.scrollbar
----@field current_scale number
 local View = Object:extend()
 
 -- context can be "application" or "session". The instance of objects
@@ -59,10 +17,67 @@ function View:new()
   self.scroll = { x = 0, y = 0, to = { x = 0, y = 0 } }
   self.cursor = "arrow"
   self.scrollable = false
-  self.v_scrollbar = Scrollbar({direction = "v", alignment = "e"})
-  self.h_scrollbar = Scrollbar({direction = "h", alignment = "e"})
+  self.v_scrollbar = Scrollbar(self, {direction = "v", alignment = "e"})
+  self.h_scrollbar = Scrollbar(self, {direction = "h", alignment = "e"})
   self.current_scale = SCALE
+
+  -- drawing surfaces variables
+  self.named_surfaces = { }
+  self.surface_to_draw = { }
 end
+
+
+-- Ensure the surface is set to be actually "presented" and draw the
+-- background when first used.
+-- The role of the surface_id is to ensure the same surface is not drawn
+-- multiple times.
+function View:set_surface_to_draw(surface, surface_id)
+  if not self.surface_to_draw[surface_id] then
+    self.surface_to_draw[surface_id] = surface
+  end
+end
+
+
+function View:surface_from_list(surface_list, id, x, y, w, h, background)
+  local surface = surface_list[id]
+  local surf_x, surf_y, surf_w, surf_h
+  if surface then
+    surf_x, surf_y, surf_w, surf_h = surface.get_rect()
+  end
+  if not surface or surf_w ~= w or surf_h ~= h then
+    -- if we have no surface or the size does not match create a new one under the same id
+    surface = renderer.surface.create(x, y, w, h)
+    renderer.set_current_surface(surface)
+    -- If the surface_id was not in surface_to_draw that means it is the first time
+    -- this surface is used in the draw() round: we take this opportunity to draw
+    -- it background so that it is done only once for the draw() round.
+    renderer.draw_rect(x, y, w, h, background or style.background)
+    surface_list[id] = surface
+    -- we returns now to avoid calling again set_current_surface after
+    -- this if clause
+    return surface
+  elseif surf_x ~= x or surf_y ~= y then
+    -- here we may call set_position() unconditionally
+    surface.set_position(x, y)
+  end
+  renderer.set_current_surface(surface)
+  return surface
+end
+
+
+function View:set_surface_for(name, x, y, w, h, background)
+  local surface = surface_from_list(self.named_surfaces, name, x, y, w, h, background)
+  self:set_surface_to_draw(surface, name)
+end
+
+
+function View:present_surfaces()
+  for id, surface in pairs(self.surface_to_draw) do
+    renderer.present_surface(surface)
+  end
+  self.surface_to_draw = { }
+end
+
 
 function View:move_towards(t, k, dest, rate, name)
   if type(t) ~= "table" then
@@ -245,8 +260,6 @@ function View:get_content_bounds()
 end
 
 
----@return number x
----@return number y
 function View:get_content_offset()
   local x = common.round(self.position.x - self.scroll.x)
   local y = common.round(self.position.y - self.scroll.y)
@@ -287,14 +300,6 @@ function View:update()
   self:move_towards(self.scroll, "y", self.scroll.to.y, 0.3, "scroll")
   if not self.scrollable then return end
   self:update_scrollbar()
-end
-
-
----@param color renderer.color
-function View:draw_background(color)
-  local x, y = self.position.x, self.position.y
-  local w, h = self.size.x, self.size.y
-  renderer.draw_rect(x, y, w, h, color)
 end
 
 

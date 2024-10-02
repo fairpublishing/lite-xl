@@ -1,5 +1,9 @@
 #include "rensurface.h"
 
+void rensurf_init(RenSurface *rs, int x_origin, int y_origin) {
+  rencache_init(&rs->rencache, x_origin, y_origin);
+}
+
 void rensurf_setup(RenSurface *rs, SDL_Renderer *renderer, int w, int h, int scale) {
   /* Note that w and h here should always be in pixels and obtained from
      a call to SDL_GL_GetDrawableSize(). */
@@ -36,3 +40,9 @@ void rensurf_free(RenSurface *rs) {
   SDL_FreeSurface(rs->surface);
 }
 
+void rensurf_get_rect(RenSurface *rs, int *x, int *y, int *w, int *h) {
+  *x = rs->rencache.x_origin;
+  *y = rs->rencache.y_origin;
+  *w = rs->surface->w;
+  *h = rs->surface->h;
+}

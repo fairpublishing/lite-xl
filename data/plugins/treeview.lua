@@ -21,6 +21,7 @@ local tooltip_delay = 0.5
 local tooltip_alpha = 255
 local tooltip_alpha_rate = 1
 
+local surface_base_width = 110 * SCALE
 
 local function get_depth(filename)
   local n = 1
@@ -274,9 +275,11 @@ function TreeView:draw_tooltip()
 
   local bx, by = x - tooltip_border, y - tooltip_border
   local bw, bh = w + 2 * tooltip_border, h + 2 * tooltip_border
+  local background = replace_alpha(style.background2, self.tooltip.alpha)
+  self:set_surface_for("tooltip", bx, by, bw, bh, background)
   renderer.draw_rect(bx, by, bw, bh, replace_alpha(style.text, self.tooltip.alpha))
-  renderer.draw_rect(x, y, w, h, replace_alpha(style.background2, self.tooltip.alpha))
   common.draw_text(style.font, replace_alpha(style.text, self.tooltip.alpha), text, "center", x, y, w, h)
+  self:present_surfaces()
 end
 
 
@@ -354,13 +357,20 @@ function TreeView:draw_item(item, active, hovered, x, y, w, h)
 end
 
 
+function TreeView:compute_required_width()
+  return math.ceil(self.size.x / surface_base_width) * surface_base_width
+end
+
+
 function TreeView:draw()
   if not self.visible then return end
-  self:draw_background(style.background2)
-  local _y, _h = self.position.y, self.size.y
+  local _x, _y = self.position.x, self.position.y
+  local _w, _h = self:compute_required_width(), self.size.y
 
   local doc = core.active_view.doc
   local active_filename = doc and system.absolute_path(doc.filename or "")
+
+  self:set_surface_for("treeview", _x, _y, _w, _h, style.background2)
 
   for item, x,y,w,h in self:each_item() do
     if y + h >= _y and y < _y + _h then
@@ -375,6 +385,8 @@ function TreeView:draw()
   if self.hovered_item and self.tooltip.x and self.tooltip.alpha > 0 then
     core.root_view:defer_draw(self.draw_tooltip, self)
   end
+
+  self:present_surfaces()
 end
 
 

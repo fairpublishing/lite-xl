@@ -9,6 +9,8 @@ local View = require "core.view"
 ---@class core.node : core.object
 local Node = Object:extend()
 
+Node.next_id = 0
+
 function Node:new(type)
   self.type = type or "leaf"
   self.position = { x = 0, y = 0 }
@@ -24,6 +26,14 @@ function Node:new(type)
   self.tab_offset = 1
   self.tab_width = style.tab_width
   self.move_towards = View.move_towards
+  self.id = -1
+end
+
+
+function Node:get_id()
+  if self.id >= 0 then return end
+  self.id = Node.next_id
+  Node.next_id = Node.next_id + 1
 end
 
 
@@ -543,18 +553,24 @@ function Node:draw_tab(view, is_active, is_hovered, is_close_hovered, x, y, w, h
   -- Title
   x = x + cpad
   w = cx - x
+  -- We really want to keep the following clip operation even with the new
+  -- graphical architecture one-surface-for-each-view to cut the text that may
+  -- overflow.
   core.push_clip_rect(x, y, w, h)
   self:draw_tab_title(view, style.font, is_active, is_hovered, x, y, w, h)
   core.pop_clip_rect()
 end
 
-function Node:draw_tabs()
+function Node:draw_tabs(view)
   local _, y, w, h, scroll_padding = self:get_scroll_button_rect(1)
   local x = self.position.x
   local ds = style.divider_size
-  local dots_width = style.font:get_width("…")
-  core.push_clip_rect(x, y, self.size.x, h)
-  renderer.draw_rect(x, y, self.size.x, h, style.background2)
+
+  self:get_id() -- we need an id to draw tabs because we want a named surface
+  renderer.set_viewport(x, y, self.size.x, h)
+  local surface_id = "tab " .. tostring(self.id)
+  view:set_surface_for(surface_id, x, y, self.size.x, h, style.background2)
+
   renderer.draw_rect(x, y + h - ds, self.size.x, ds, style.divider)
   local tabs_number = self:get_visible_tabs_number()
 
@@ -578,22 +594,26 @@ function Node:draw_tabs()
     common.draw_text(style.icon_font, right_button_style, ">", nil, xrb + scroll_padding, yrb, 0, h)
   end
 
-  core.pop_clip_rect()
+  view:present_surfaces()
 end
 
 
 function Node:draw()
   if self.type == "leaf" then
     if self:should_show_tabs() then
-      self:draw_tabs()
+      self:draw_tabs(core.root_view)
     end
     local pos, size = self.active_view.position, self.active_view.size
-    core.push_clip_rect(pos.x, pos.y, size.x, size.y)
+    renderer.set_viewport(pos.x, pos.y, size.x, size.y)
     self.active_view:draw()
-    core.pop_clip_rect()
+    -- In theory we should reset the viewport but probably it is fine to leave it set.
+    -- Needs more investigations,
+    -- renderer.set_viewport()
   else
     local x, y, w, h = self:get_divider_rect()
-    renderer.draw_rect(x, y, w, h, style.divider)
+    -- directly draw the rectangle using the SDL renderer, without using
+    -- any surface or RenCache as intermediary.
+    renderer.render_fill_rect(x, y, w, h, style.divider)
     self:propagate("draw")
   end
 end
