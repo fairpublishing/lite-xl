@@ -2,6 +2,7 @@
 #include "api.h"
 #include "../renderer.h"
 #include "../rencache.h"
+#include "../rensurface.h"
 #include "../renwindow.h"
 #include "lua.h"
 
@@ -383,17 +384,67 @@ static const luaL_Reg fontLib[] = {
   { NULL, NULL }
 };
 
+// Helper function to check and get RenSurface* from Lua userdata
+static RenSurface* check_rensurface(lua_State *L, int idx) {
+    return (RenSurface*)luaL_checkudata(L, idx, API_TYPE_RENSURFACE);
+}
+
+static int f_create_surface(lua_State *L) {
+    int w = luaL_checkinteger(L, 1);
+    int h = luaL_checkinteger(L, 2);
+
+    SDL_Renderer *renderer = window_renderer.renderer;
+    int scale = window_renderer.scale;
+    if (!renderer) {
+        return luaL_error(L, "Renderer is not initialized");
+    }
+
+    // Allocate and create a new RenSurface userdata
+    RenSurface *rs = (RenSurface*)lua_newuserdata(L, sizeof(RenSurface));
+
+    // Set its metatable
+    luaL_getmetatable(L, API_TYPE_RENSURFACE);
+    lua_setmetatable(L, -2);
+
+    // Initialize the RenSurface
+    rensurf_setup(rs, renderer, w, h, scale);
+
+    // Return the userdata
+    return 1;
+}
+
+static int f_rensurf_free(lua_State *L) {
+    RenSurface *rs = check_rensurface(L, 1);
+    rensurf_free(rs);
+    return 0;
+}
+
+// Define the methods for the RenSurface type
+static const luaL_Reg libRenSurface[] = {
+    {"__gc",         f_rensurf_free      },
+    {"create",       f_create_surface    },
+    {NULL, NULL}
+};
+
 int luaopen_renderer(lua_State *L) {
   // gets a reference on the registry to store font data
   lua_newtable(L);
   RENDERER_FONT_REF = luaL_ref(L, LUA_REGISTRYINDEX);
 
   luaL_newlib(L, lib);
+
   luaL_newmetatable(L, API_TYPE_FONT);
   luaL_setfuncs(L, fontLib, 0);
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
   lua_setfield(L, -2, "font");
 
+  luaL_newmetatable(L, API_TYPE_RENSURFACE);
+  luaL_setfuncs(L, libRenSurface, 0);
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -2, "__index");
+  lua_setfield(L, -2, "surface");
+
   return 1;
 }
+
