@@ -1,7 +1,6 @@
 #include <string.h>
 #include "api.h"
 #include "../renderer.h"
-#include "../rencache.h"
 #include "../rensurface.h"
 #include "../renwindow.h"
 #include "lua.h"
@@ -270,15 +269,16 @@ static RenColor checkcolor(lua_State *L, int idx, int def) {
 
 static int f_show_debug(lua_State *L) {
   luaL_checkany(L, 1);
-  rencache_show_debug(rencache, lua_toboolean(L, 1));
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  rencache_show_debug(&rs->rencache, lua_toboolean(L, 1));
   return 0;
 }
 
 
 static int f_get_size(lua_State *L) {
   int w, h;
-  RenSurface rs = renwin_get_surface(&window_renderer);
-  ren_get_size(&rs, &w, &h);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  ren_get_size(rs, &w, &h);
   lua_pushnumber(L, w);
   lua_pushnumber(L, h);
   return 2;
@@ -286,15 +286,16 @@ static int f_get_size(lua_State *L) {
 
 
 static int f_begin_frame(UNUSED lua_State *L) {
-  RenSurface rs = renwin_get_surface(&window_renderer);
-  rencache_begin_frame(rencache, &rs);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  rencache_begin_frame(&rs->rencache, rs);
   return 0;
 }
 
 
 static int f_end_frame(UNUSED lua_State *L) {
-  RenSurface rs = renwin_get_surface(&window_renderer);
-  rencache_end_frame(rencache, &rs);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  RenCache *rencache = &rs->rencache;
+  rencache_end_frame(rencache, rs);
   rencache_update_window(rencache, &window_renderer);
   rencache_swap_buffers(rencache);
   // clear the font reference table
@@ -317,7 +318,8 @@ static int f_set_clip_rect(lua_State *L) {
   lua_Number w = luaL_checknumber(L, 3);
   lua_Number h = luaL_checknumber(L, 4);
   RenRect rect = rect_to_grid(x, y, w, h);
-  rencache_set_clip_rect(rencache, rect);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  rencache_set_clip_rect(&rs->rencache, rect);
   return 0;
 }
 
@@ -329,7 +331,8 @@ static int f_draw_rect(lua_State *L) {
   lua_Number h = luaL_checknumber(L, 4);
   RenRect rect = rect_to_grid(x, y, w, h);
   RenColor color = checkcolor(L, 5, 255);
-  rencache_draw_rect(rencache, rect, color);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  rencache_draw_rect(&rs->rencache, rect, color);
   return 0;
 }
 
@@ -354,7 +357,8 @@ static int f_draw_text(lua_State *L) {
   double x = luaL_checknumber(L, 3);
   int y = luaL_checknumber(L, 4);
   RenColor color = checkcolor(L, 5, 255);
-  x = rencache_draw_text(rencache, fonts, text, len, x, y, color);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  x = rencache_draw_text(&rs->rencache, fonts, text, len, x, y, color);
   lua_pushnumber(L, x);
   return 1;
 }
@@ -407,6 +411,7 @@ static int f_create_surface(lua_State *L) {
     lua_setmetatable(L, -2);
 
     // Initialize the RenSurface
+    rensurf_init(rs);
     rensurf_setup(rs, renderer, w, h, scale);
 
     // Return the userdata

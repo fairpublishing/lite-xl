@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <SDL.h>
 #include "api/api.h"
-#include "rencache.h"
 #include "renderer.h"
+#include "rensurface.h"
+#include "renwindow.h"
 
 #include <signal.h>
 
@@ -181,7 +182,6 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Error creating lite-xl window: %s", SDL_GetError());
     exit(1);
   }
-  rencache = rencache_create();
   ren_init(window);
 
   lua_State *L;
@@ -265,6 +265,8 @@ init_lua:
     exit(1);
   }
   lua_pcall(L, 0, 1, 0);
+  RenSurface *rs = renwin_get_surface(&window_renderer);
+  RenCache *rencache = &rs->rencache;
   if (lua_toboolean(L, -1)) {
     lua_close(L);
     rencache_invalidate(rencache);

@@ -21,9 +21,8 @@ typedef struct RenCache {
     bool show_debug;
 } RenCache;
 
-RenCache* rencache_create();
+void rencache_init(RenCache *cache);
 void rencache_destroy(RenCache* cache);
-
 void  rencache_show_debug(RenCache* cache, bool enable);
 void  rencache_set_clip_rect(RenCache* cache, RenRect rect);
 void  rencache_draw_rect(RenCache* cache, RenRect rect, RenColor color);
@@ -33,7 +32,5 @@ void  rencache_begin_frame(RenCache* cache, RenSurface* rs);
 void  rencache_end_frame(RenCache* cache, RenSurface* rs);
 void  rencache_swap_buffers(RenCache* cache);
 void  rencache_update_window(RenCache* cache, RenWindow *renwindow);
-
-extern RenCache* rencache;
 
 #endif

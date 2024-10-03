@@ -19,17 +19,18 @@ void renwin_init_surface(RenWindow *ren) {
   /* We assume here "ren" is zero-initialized */
   ren->renderer = SDL_CreateRenderer(ren->window, -1, 0);
   ren->scale = query_surface_size(ren, &w_pixels, &h_pixels);
+  rensurf_init(&ren->rensurface);
   rensurf_setup(&ren->rensurface, ren->renderer, w_pixels, h_pixels, ren->scale);
 }
 
 
 void renwin_clip_to_surface(RenWindow *ren) {
-  SDL_SetClipRect(renwin_get_surface(ren).surface, NULL);
+  SDL_SetClipRect(renwin_get_surface(ren)->surface, NULL);
 }
 
 
-RenSurface renwin_get_surface(RenWindow *ren) {
-  return ren->rensurface;
+RenSurface *renwin_get_surface(RenWindow *ren) {
+  return &ren->rensurface;
 }
 
 void renwin_resize_surface(UNUSED RenWindow *ren) {

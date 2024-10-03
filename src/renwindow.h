@@ -16,5 +16,5 @@ void renwin_resize_surface(RenWindow *ren);
 void renwin_show_window(RenWindow *ren);
 void renwin_render_surface(RenWindow *ren);
 void renwin_free(RenWindow *ren);
-RenSurface renwin_get_surface(RenWindow *ren);
+RenSurface *renwin_get_surface(RenWindow *ren);
 

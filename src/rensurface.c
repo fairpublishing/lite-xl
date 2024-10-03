@@ -1,5 +1,9 @@
 #include "rensurface.h"
 
+void rensurf_init(RenSurface *rs) {
+  rencache_init(&rs->rencache);
+}
+
 void rensurf_setup(RenSurface *rs, SDL_Renderer *renderer, int w, int h, int scale) {
   /* Note that w and h here should always be in pixels and obtained from
      a call to SDL_GL_GetDrawableSize(). */
