@@ -43,7 +43,7 @@ void ren_draw_rect(RenSurface *rs, RenRect rect, RenColor color);
 
 void ren_init(SDL_Window *win);
 void ren_resize_window(RenWindow *window_renderer);
-void ren_update_rects(RenWindow *window_renderer, RenRect *rects, int count);
+void ren_present_surface(RenWindow *window_renderer, RenSurface *rs, int x, int y);
 void ren_set_clip_rect(RenSurface *rs, RenRect rect);
 void ren_get_size(RenSurface *rs, int *x, int *y); /* Reports the size in points. */
 void ren_free_window_resources(RenWindow *window_renderer);

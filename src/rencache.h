@@ -34,6 +34,6 @@ void  rencache_invalidate(RenCache* cache);
 void  rencache_begin_frame(RenCache* cache, RenSurface* rs);
 void  rencache_end_frame(RenCache* cache, RenSurface* rs);
 void  rencache_swap_buffers(RenCache* cache);
-void  rencache_update_window(RenCache* cache, RenWindow *renwindow);
+void  rencache_update_rects(RenCache* cache, RenSurface *rs);
 
 #endif

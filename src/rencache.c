@@ -335,10 +335,10 @@ void rencache_end_frame(RenCache* cache, RenSurface *rs) {
 }
 
 
-void  rencache_update_window(RenCache* cache, RenWindow *renwindow) {
+void  rencache_update_rects(RenCache* cache, RenSurface *rs) {
   /* update dirty rects */
   if (cache->rect_count > 0) {
-    ren_update_rects(renwindow, cache->rect_buf, cache->rect_count);
+    rensurf_update_rects(rs, cache->rect_buf, cache->rect_count);
   }
 }
 

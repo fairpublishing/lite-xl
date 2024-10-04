@@ -562,14 +562,13 @@ void ren_resize_window(RenWindow *window_renderer) {
 }
 
 
-void ren_update_rects(RenWindow *window_renderer, RenRect *rects, int count) {
+void ren_present_surface(RenWindow *window_renderer, RenSurface *rs, int x, int y) {
   static bool initial_frame = true;
   if (initial_frame) {
     renwin_show_window(window_renderer);
     initial_frame = false;
   }
-  rensurf_update_rects(&window_renderer->rensurface, rects, count);
-  renwin_render_surface(window_renderer);
+  renwin_render_surface(window_renderer, rs, x, y);
 }
 
 
