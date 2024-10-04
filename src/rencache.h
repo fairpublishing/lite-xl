@@ -5,12 +5,15 @@
 #include <lua.h>
 #include "renderer.h"
 
+#define CELLS_X 80
+#define CELLS_Y 50
+
 typedef struct RenCache {
-    unsigned *cells_buf1;
-    unsigned *cells_buf2;
+    unsigned cells_buf1[CELLS_X * CELLS_Y];
+    unsigned cells_buf2[CELLS_X * CELLS_Y];
     unsigned *cells_prev;
     unsigned *cells;
-    RenRect *rect_buf;
+    RenRect rect_buf[CELLS_X * CELLS_Y / 2];
     size_t command_buf_size;
     uint8_t *command_buf;
     bool resize_issue;

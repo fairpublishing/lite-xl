@@ -25,8 +25,6 @@
 ** of hash values, take the cells that have changed since the previous frame,
 ** merge them into dirty rectangles and redraw only those regions */
 
-#define CELLS_X 80
-#define CELLS_Y 50
 #define CELL_SIZE 96
 #define CMD_BUF_RESIZE_RATE 1.2
 #define CMD_BUF_INIT_SIZE (1024 * 512)
@@ -62,16 +60,8 @@ typedef struct {
 } DrawRectCommand;
 
 void rencache_init(RenCache *cache) {
-  cache->cells_buf1 = malloc(sizeof(unsigned) * CELLS_X * CELLS_Y);
-  cache->cells_buf2 = malloc(sizeof(unsigned) * CELLS_X * CELLS_Y);
-  cache->rect_buf = malloc(sizeof(RenRect) * CELLS_X * CELLS_Y / 2);
   cache->command_buf_size = 0;
   cache->command_buf = NULL;
-
-  if (!cache->cells_buf1 || !cache->cells_buf2 || !cache->rect_buf) {
-      rencache_destroy(cache);
-  }
-
   cache->cells_prev = cache->cells_buf1;
   cache->cells = cache->cells_buf2;
   cache->resize_issue = false;
@@ -81,9 +71,6 @@ void rencache_init(RenCache *cache) {
 }
 
 void rencache_destroy(RenCache* cache) {
-  free(cache->cells_buf1);
-  free(cache->cells_buf2);
-  free(cache->rect_buf);
   free(cache->command_buf);
 }
 
