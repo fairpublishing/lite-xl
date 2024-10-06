@@ -7,6 +7,8 @@ local translate = require "core.doc.translate"
 local ime = require "core.ime"
 local View = require "core.view"
 
+local TILE_CHARACTERS, TILE_LINES = 80, 40
+
 ---@class core.docview : core.view
 ---@field super core.view
 local DocView = View:extend()
@@ -21,6 +23,107 @@ local function move_to_line_offset(dv, line, col, offset)
   xo.line = line + offset
   xo.col = dv:get_x_offset_col(line + offset, xo.offset)
   return xo.line, xo.col
+end
+
+
+function DocView:get_tile_indexes(x, y)
+  local lh = self.tiles_metric.line_height
+  local cw = self.tiles_metric.char_width
+  local line = math.max(0, math.floor(y / lh)) -- not really the line but line - 1
+  return math.floor(y / (cw * TILE_CHARACTERS)) + 1, math.floor(line / TILE_LINES) + 1
+end
+
+
+function DocView:get_tile_limits(tile_i, tile_j)
+  local lh = self.tiles_metric.line_height
+  local cw = self.tiles_metric.char_width
+  return (tile_i - 1) * (cw * TILE_CHARACTERS), (tile_j - 1) * (lh * TILE_LINES)
+end
+
+
+-- Ensure the surface is set to be actually "presented" and draw the
+-- background when first used.
+function DocView:set_surface_to_draw(surface, tile_id, x, y, w, h, background)
+  if not self.surface_to_draw[tile_id] then
+    -- If the tile_id was not in surface_to_draw that means it is the first time
+    -- this surface is used in the draw() round: we take this opportunity to draw
+    -- it background so that it is done only once for the draw() round.
+    renderer.draw_rect(surface, 0, 0, w, h, background or style.background)
+    self.surface_to_draw[tile_id] = { surface, x, y }
+  end
+end
+
+
+-- We provide a surface to draw the content (document's text body) at the given tile
+-- coordinates. We ensure the surface has the background set since the beginning.
+function DocView:surface_for_content(tile_i, tile_j)
+  local w, h = self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+  local x, y = (tile_i - 1) * w, (tile_j - 1) * h
+  local column_surfaces = self.content_surfaces[tile_i]
+  if not column_surfaces then
+    column_surfaces = {}
+    self.content_surfaces[tile_i] = column_surfaces
+  end
+  local surface = column_surfaces[tile_j]
+  if not surface then
+    -- FIXME: ensure the drawing operations will be clipped to the surface size.
+    --   check if we need to call a clipping function.
+    surface = renderer.surface.create(w, h)
+    column_surfaces[tile_j] = surface
+  end
+  local tile_id = "doc " + to_string(tile_i) + " " + tostring(tile_j)
+  self:set_surface_to_draw(surface, tile_id, x, y, w, h)
+  return surface
+end
+
+
+function DocView:surface_for_gutter(tile_j)
+  local w, h = self.tiles_metric.gutter_width, self.tiles_metric.line_height * TILE_LINES
+  local x, y = 0, (tile_j - 1) * h
+  local surface = self.gutter_surfaces[tile_j]
+  if not surface then
+    -- FIXME: ensure the drawing operations will be clipped to the surface size.
+    --   check if we need to call a clipping function.
+    surface = renderer.surface.create(w, h)
+    self.gutter_surfaces[tile_j] = surface
+  end
+  local tile_id = "gutter " + tostring(tile_j)
+  self:set_surface_to_draw(surface, tile_id, x, y, w, h)
+  return surface
+end
+
+
+function DocView:surface_for(name, w, h)
+  local surface = self.named_surfaces[name]
+  local surf_w, surf_h
+  if surface then
+    surf_w, surf_h = surface.get_size()
+  end
+  if not surface or surf_w ~= w or surf_h ~= h then
+    surface = renderer.surface.create(w, h)
+    self.named_surfaces[name] = surface
+  end
+  return surface
+end
+
+
+function DocView:setup_tiles_for_drawing()
+  local new_lh = self:get_line_height()
+  local new_cw = self:get_font():get_width(' ')
+  local new_gw, gpad = self:get_gutter_width()
+  -- FIXME: include also the surface scale here
+
+  if new_lh ~= self.tiles_metric.line_height or new_cw ~= self.tiles_metric.char_width then
+    self.content_surfaces = { }
+    self.gutter_surfaces = { }
+  elseif new_gw ~= self.tiles_metric.gutter_width then
+    self.gutter_surfaces = { }
+  end
+  self.tiles_metric.line_height  = new_lh
+  self.tiles_metric.char_width   = new_cw
+  self.tiles_metric.gutter_width = new_gw
+
+  self.surface_to_draw = { }
 end
 
 
@@ -64,6 +167,8 @@ function DocView:new(doc)
   self.ime_selection = { from = 0, size = 0 }
   self.ime_status = false
   self.hovering_gutter = false
+  self.tiles_metric = { line_height = 0, char_width = 0 }
+  self.content_surfaces = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
   self.h_scrollbar:set_forced_status(config.force_scrollbar_status)
 end
@@ -139,10 +244,10 @@ function DocView:get_gutter_width()
 end
 
 
-function DocView:get_line_screen_position(line, col)
+function DocView:get_line_screen_position(include_gutter, line, col)
   local x, y = self:get_content_offset()
   local lh = self:get_line_height()
-  local gw = self:get_gutter_width()
+  local gw = include_gutter and self:get_gutter_width() or 0
   y = y + (line-1) * lh + style.padding.y
   if col then
     return x + gw + self:get_col_x_offset(line, col), y
@@ -232,7 +337,7 @@ end
 
 
 function DocView:resolve_screen_position(x, y)
-  local ox, oy = self:get_line_screen_position(1)
+  local ox, oy = self:get_line_screen_position(true, 1)
   local line = math.floor((y - oy) / self:get_line_height()) + 1
   line = common.clamp(line, 1, #self.doc.lines)
   local col = self:get_x_offset_col(line, x - ox)
@@ -243,7 +348,7 @@ end
 function DocView:scroll_to_line(line, ignore_if_visible, instant)
   local min, max = self:get_visible_line_range()
   if not (ignore_if_visible and line > min and line < max) then
-    local x, y = self:get_line_screen_position(line)
+    local x, y = self:get_line_screen_position(false, line)
     local ox, oy = self:get_content_offset()
     local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
     self.scroll.to.y = math.max(0, y - oy - (self.size.y - scroll_h) / 2)
@@ -256,7 +361,7 @@ end
 
 function DocView:scroll_to_make_visible(line, col)
   local _, oy = self:get_content_offset()
-  local _, ly = self:get_line_screen_position(line, col)
+  local _, ly = self:get_line_screen_position(false, line, col)
   local lh = self:get_line_height()
   local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
   self.scroll.to.y = common.clamp(self.scroll.to.y, ly - oy - self.size.y + scroll_h + lh * 2, ly - oy - lh)
@@ -379,7 +484,7 @@ function DocView:update_ime_location()
   if not self.ime_status then return end
 
   local line1, col1, line2, col2 = self.doc:get_selection(true)
-  local x, y = self:get_line_screen_position(line1)
+  local x, y = self:get_line_screen_position(true, line1)
   local h = self:get_line_height()
   local col = math.min(col1, col2)
 
@@ -430,8 +535,13 @@ end
 
 
 function DocView:draw_line_highlight(x, y)
-  local lh = self:get_line_height()
-  renderer.draw_rect(x, y, self.size.x, lh, style.line_highlight)
+  local w, h = self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height
+  local tile_i, tile_j = self:get_tile_indexes(x, y + self:get_line_text_y_offset())
+  while x < self.scroll.x + self.size.x do
+    local surface = self:surface_for_content(tile_i, tile_j)
+    renderer.draw_rect(surface, 0, y, w, h, style.line_highlight)
+    x, tile_i = x + w, tile_i + 1
+  end
 end
 
 
@@ -444,20 +554,34 @@ function DocView:draw_line_text(line, x, y)
   if string.sub(tokens[tokens_count], -1) == "\n" then
     last_token = tokens_count - 1
   end
+  local tile_i, tile_j = self:get_tile_indexes(tx, ty)
+  local surface = self:surface_for_content(tile_i, tile_j)
   for tidx, type, text in self.doc.highlighter:each_token(line) do
     local color = style.syntax[type]
     local font = style.syntax_fonts[type] or default_font
     -- do not render newline, fixes issue #1164
     if tidx == last_token then text = text:sub(1, -2) end
-    tx = renderer.draw_text(font, text, tx, ty, color)
-    if tx > self.position.x + self.size.x then break end
+    tx = renderer.draw_text(surface, font, text, tx, ty, color)
+    local new_tile_i = self:get_tile_indexes(tx, ty)
+    for tile_run_i = tile_i + 1, new_tile_i do
+      -- Here means we crossed the boundary between tiles: redraw text in
+      -- the tiles we overflown into.
+      -- Note: the fact that "tx" is in a new tile does not necessarily means the
+      -- text overflowed into a new tile but this a limiting case.
+      surface = self:surface_for_content(tile_run_i, tile_j)
+      renderer.draw_text(surface, font, text, tx, ty, color)
+    end
+    tile_i = new_tile_i
+    local x_tile_l, _ = self:get_tile_limits(tile_i, tile_j)
+    if x_tile_l > self.position.x + self.size.x then break end
   end
   return self:get_line_height()
 end
 
 function DocView:draw_caret(x, y)
-    local lh = self:get_line_height()
-    renderer.draw_rect(x, y, style.caret_width, lh, style.caret)
+    local w, h = style.caret_width, self.tiles_metric.line_height
+    local surface = self:surface_for("cursor", w, h)
+    self:set_surface_to_draw(surface, "cursor", x, y, w, h)
 end
 
 function DocView:draw_line_body(line, x, y)
@@ -498,7 +622,7 @@ function DocView:draw_line_body(line, x, y)
   end
 
   -- draw line's text
-  return self:draw_line_text(line, x, y)
+  return self:draw_line_text(tile, line, x, y)
 end
 
 
@@ -511,14 +635,16 @@ function DocView:draw_line_gutter(line, x, y, width)
     end
   end
   x = x + style.padding.x
-  local lh = self:get_line_height()
-  common.draw_text(self:get_font(), color, line, "right", x, y, width, lh)
+  local lh = self.tiles_metric.line_height
+  local _, tile_j = self:get_tile_indexes(x, y)
+  local surface = self:surface_for_gutter(tile_j)
+  common.draw_text(surface, self:get_font(), color, line, "right", x, y, width, lh)
   return lh
 end
 
 
 function DocView:draw_ime_decoration(line1, col1, line2, col2)
-  local x, y = self:get_line_screen_position(line1)
+  local x, y = self:get_line_screen_position(true, line1)
   local line_size = math.max(1, SCALE)
   local lh = self:get_line_height()
 
@@ -554,7 +680,7 @@ function DocView:draw_overlay()
         else
           if config.disable_blink
           or (core.blink_timer - core.blink_start) % T < T / 2 then
-            self:draw_caret(self:get_line_screen_position(line1, col1))
+            self:draw_caret(self:get_line_screen_position(true, line1, col1))
           end
         end
       end
@@ -562,30 +688,38 @@ function DocView:draw_overlay()
   end
 end
 
+
 function DocView:draw()
-  self:draw_background(style.background)
+  self:setup_tiles_for_drawing()
+  -- self:draw_background(style.background)
   local _, indent_size = self.doc:get_indent_info()
   self:get_font():set_tab_size(indent_size)
 
-  local minline, maxline = self:get_visible_line_range()
+  local minline_screen, maxline_screen = self:get_visible_line_range()
   local lh = self:get_line_height()
 
-  local x, y = self:get_line_screen_position(minline)
-  local gw, gpad = self:get_gutter_width()
+  -- Compute minlines and maxlines rounded in a way to complete the corresponding
+  -- tiles.
+  local minline = math.floor((minline_screen - 1) / TILE_LINES) * TILE_LINES + 1
+  local maxline = math.floor((maxline_screen - 1) / TILE_LINES + 1) * TILE_LINES
+
+  local x, y = self:get_line_screen_position(false, minline)
+  local gw, gpad = self.tiles_metric.gutter_width, style.padding.x * 2
   for i = minline, maxline do
-    y = y + (self:draw_line_gutter(i, self.position.x, y, gpad and gw - gpad or gw) or lh)
+    y = y + (self:draw_line_gutter(i, self.position.x, y, gw) or lh)
   end
 
   local pos = self.position
-  x, y = self:get_line_screen_position(minline)
+  x, y = self:get_line_screen_position(false, minline)
   -- the clip below ensure we don't write on the gutter region. On the
   -- right side it is redundant with the Node's clip.
-  core.push_clip_rect(pos.x + gw, pos.y, self.size.x - gw, self.size.y)
+  -- We no longer needs to clip there to protect the gutter
+  -- core.push_clip_rect(pos.x + gw, pos.y, self.size.x - gw, self.size.y)
   for i = minline, maxline do
     y = y + (self:draw_line_body(i, x, y) or lh)
   end
   self:draw_overlay()
-  core.pop_clip_rect()
+  -- core.pop_clip_rect()
 
   self:draw_scrollbar()
 end
