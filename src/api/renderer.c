@@ -406,7 +406,7 @@ static const luaL_Reg fontLib[] = {
   { NULL, NULL }
 };
 
-static int f_create_surface(lua_State *L) {
+static int f_rensurf_create(lua_State *L) {
     int w = luaL_checkinteger(L, 1);
     int h = luaL_checkinteger(L, 2);
 
@@ -431,6 +431,15 @@ static int f_create_surface(lua_State *L) {
     return 1;
 }
 
+static int f_rensurf_get_size(lua_State *L) {
+    RenSurface *rs = check_rensurface(L, 1);
+    int w, h;
+    rensurf_get_size(rs, &w, &h);
+    lua_pushnumber(L, w);
+    lua_pushnumber(L, h);
+    return 2;
+}
+
 static int f_rensurf_free(lua_State *L) {
     RenSurface *rs = check_rensurface(L, 1);
     rensurf_free(rs);
@@ -440,7 +449,8 @@ static int f_rensurf_free(lua_State *L) {
 // Define the methods for the RenSurface type
 static const luaL_Reg libRenSurface[] = {
     {"__gc",         f_rensurf_free      },
-    {"create",       f_create_surface    },
+    {"create",       f_rensurf_create    },
+    {"get_size",     f_rensurf_get_size  },
     {NULL, NULL}
 };
 
