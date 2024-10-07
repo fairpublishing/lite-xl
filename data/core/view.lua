@@ -64,6 +64,21 @@ function View:new()
   self.current_scale = SCALE
 end
 
+View.debug_msg = { }
+
+function View:DebugPosition()
+  if self.scroll.x == self.scroll.to.x and self.scroll.y == self.scroll.to.y then
+    local debug_msg = string.format("%p %s pos=(%g,%g) scroll=(%g,%g) size=(%g,%g)", self, self.doc and self.doc.filename,
+      self.position.x, self.position.y,
+      self.scroll.x, self.scroll.y,
+      self.size.x, self.size.y)
+    if debug_msg ~= View.debug_msg[self] then
+      print(debug_msg)
+      View.debug_msg[self] = debug_msg
+    end
+  end
+end
+
 function View:move_towards(t, k, dest, rate, name)
   if type(t) ~= "table" then
     return self:move_towards(self, t, k, dest, rate, name)
