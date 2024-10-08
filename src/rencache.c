@@ -59,7 +59,7 @@ typedef struct {
   RenColor color;
 } DrawRectCommand;
 
-void rencache_init(RenCache *cache) {
+void rencache_init(RenCache *cache, int x, int y) {
   cache->command_buf_size = 0;
   cache->command_buf = NULL;
   cache->cells_prev = cache->cells_buf1;
@@ -67,6 +67,8 @@ void rencache_init(RenCache *cache) {
   cache->resize_issue = false;
   cache->screen_rect = (RenRect){0};
   cache->last_clip_rect = (RenRect){0};
+  cache->x_origin = x;
+  cache->y_origin = y;
   cache->show_debug = false;
 }
 
@@ -77,6 +79,10 @@ void rencache_destroy(RenCache* cache) {
 static inline int rencache_min(int a, int b) { return a < b ? a : b; }
 static inline int rencache_max(int a, int b) { return a > b ? a : b; }
 
+static inline void rect_set_from_origin(RenCache *cache, RenRect *r) {
+  r->x = r->x - cache->x_origin;
+  r->y = r->y - cache->x_origin;
+}
 
 /* 32bit fnv-1a hash */
 #define HASH_INITIAL 2166136261
@@ -174,6 +180,7 @@ void rencache_show_debug(RenCache* cache, bool enable) {
 
 
 void rencache_set_clip_rect(RenCache* cache, RenRect rect) {
+  rect_set_from_origin(cache, &rect);
   SetClipCommand *cmd = push_command(cache, SET_CLIP, sizeof(SetClipCommand));
   if (cmd) {
     cmd->rect = intersect_rects(rect, cache->screen_rect);
@@ -183,6 +190,7 @@ void rencache_set_clip_rect(RenCache* cache, RenRect rect) {
 
 
 void rencache_draw_rect(RenCache* cache, RenRect rect, RenColor color) {
+  rect_set_from_origin(cache, &rect);
   if (rect.width == 0 || rect.height == 0 || !rects_overlap(cache->last_clip_rect, rect)) {
     return;
   }
@@ -198,6 +206,7 @@ double rencache_draw_text(RenCache* cache, RenFont **fonts, const char *text, si
   int x_offset;
   double width = ren_font_group_get_width(fonts, text, len, &x_offset);
   RenRect rect = { x + x_offset, y, (int)(width - x_offset), ren_font_group_get_height(fonts) };
+  rect_set_from_origin(cache, &rect);
   if (rects_overlap(cache->last_clip_rect, rect)) {
     int sz = len + 1;
     DrawTextCommand *cmd = push_command(cache, DRAW_TEXT, sizeof(DrawTextCommand) + sz);
@@ -206,7 +215,7 @@ double rencache_draw_text(RenCache* cache, RenFont **fonts, const char *text, si
       cmd->color = color;
       memcpy(cmd->fonts, fonts, sizeof(RenFont*)*FONT_FALLBACK_MAX);
       cmd->rect = rect;
-      cmd->text_x = x;
+      cmd->text_x = x - cache->x_origin;
       cmd->len = len;
       cmd->tab_size = ren_font_group_get_tab_size(fonts);
     }

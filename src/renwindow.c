@@ -19,7 +19,7 @@ void renwin_init_surface(RenWindow *ren) {
   /* We assume here "ren" is zero-initialized */
   ren->renderer = SDL_CreateRenderer(ren->window, -1, 0);
   ren->scale = renwin_get_size(ren, &w_pixels, &h_pixels);
-  rensurf_init(&ren->rensurface);
+  rensurf_init(&ren->rensurface, 0, 0);
   rensurf_setup(&ren->rensurface, ren->renderer, w_pixels, h_pixels, ren->scale);
 }
 

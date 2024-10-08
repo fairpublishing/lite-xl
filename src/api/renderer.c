@@ -407,8 +407,10 @@ static const luaL_Reg fontLib[] = {
 };
 
 static int f_rensurf_create(lua_State *L) {
-    int w = luaL_checkinteger(L, 1);
-    int h = luaL_checkinteger(L, 2);
+    int x = luaL_checkinteger(L, 1);
+    int y = luaL_checkinteger(L, 2);
+    int w = luaL_checkinteger(L, 3);
+    int h = luaL_checkinteger(L, 4);
 
     SDL_Renderer *renderer = window_renderer.renderer;
     int scale = window_renderer.scale;
@@ -416,18 +418,14 @@ static int f_rensurf_create(lua_State *L) {
         return luaL_error(L, "Renderer is not initialized");
     }
 
-    // Allocate and create a new RenSurface userdata
     RenSurface *rs = (RenSurface*)lua_newuserdata(L, sizeof(RenSurface));
 
-    // Set its metatable
     luaL_getmetatable(L, API_TYPE_RENSURFACE);
     lua_setmetatable(L, -2);
 
-    // Initialize the RenSurface
-    rensurf_init(rs);
+    rensurf_init(rs, x, y);
     rensurf_setup(rs, renderer, w, h, scale);
 
-    // Return the userdata
     return 1;
 }
 

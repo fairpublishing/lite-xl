@@ -21,10 +21,11 @@ typedef struct RenCache {
     RenRect screen_rect;
     RenRect last_clip_rect;
     int rect_count;
+    int x_origin, y_origin;
     bool show_debug;
 } RenCache;
 
-void rencache_init(RenCache *cache);
+void rencache_init(RenCache *cache, int x_origin, int y_origin);
 void rencache_destroy(RenCache* cache);
 void  rencache_show_debug(RenCache* cache, bool enable);
 void  rencache_set_clip_rect(RenCache* cache, RenRect rect);

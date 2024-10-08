@@ -1,7 +1,7 @@
 #include "rensurface.h"
 
-void rensurf_init(RenSurface *rs) {
-  rencache_init(&rs->rencache);
+void rensurf_init(RenSurface *rs, int x_origin, int y_origin) {
+  rencache_init(&rs->rencache, x_origin, y_origin);
 }
 
 void rensurf_setup(RenSurface *rs, SDL_Renderer *renderer, int w, int h, int scale) {
