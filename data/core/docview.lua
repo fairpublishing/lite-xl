@@ -71,6 +71,11 @@ function DocView:set_surface_to_draw(surface, tile_id, x, y, w, h, background)
 end
 
 
+function DocView:get_tile_size()
+  return self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+end
+
+
 -- We provide a surface to draw the content (document's text body) at the given tile
 -- coordinates. We ensure the surface has the background set since the beginning.
 function DocView:surface_for_content(tile_i, tile_j)
@@ -565,18 +570,25 @@ end
 
 
 function DocView:draw_line_highlight(x, y)
-  local w, h = self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+  local tile_w, tile_h = self:get_tile_size()
   local tile_i, tile_j = self:get_tile_indexes(x, y + self:get_line_text_y_offset())
-  -- We use below the same logic used in draw_line_text: we draw everything from the left-most
-  -- side of the content, even if it is not visible. We stop when the x coordinate of the new
-  -- tile is outside of the screen.
+
+  -- compute x_tile as the screen's x coordinate of the left border of the tile
+  local x_tile = self:get_tile_limits(tile_i, tile_j)
+  x_tile = self:get_screen_coordinates(x_tile, 0)
+
+  -- We use below the same logic used in draw_line_text: we proceed from the left-most
+  -- side of the content but draw only if tile is visible.
+  -- We stop when the x coordinate of the new tile is outside of the screen.
   repeat
-    local surface = self:surface_for_content(tile_i, tile_j)
-    renderer.draw_rect(surface, 0, y, w, h, style.line_highlight)
+    if x_tile + tile_w > self.position.x then
+      local surface = self:surface_for_content(tile_i, tile_j)
+      renderer.draw_rect(surface, 0, y, tile_w, tile_h, style.line_highlight)
+    end
     tile_i = tile_i + 1
-    x = x + w
-    xs = self:get_screen_coordinates(xs, 0)
-  until xs > self.position.x + self.size.x
+    x = x + tile_w
+    x_tile = x_tile + tile_w
+  until x_tile > self.position.x + self.size.x
 end
 
 
@@ -591,25 +603,39 @@ function DocView:draw_line_text(line, x, y)
     last_token = tokens_count - 1
   end
   local tile_i, tile_j = self:get_tile_indexes(tx, ty)
-  local surface = self:surface_for_content(tile_i, tile_j)
+  local tile_w, tile_h = self:get_tile_size()
+
+  -- compute x_tile as the screen's x coordinate of the left border of the tile
+  local x_tile = self:get_tile_limits(tile_i, tile_j)
+  x_tile = self:get_screen_coordinates(x_tile, 0)
+
   for tidx, type, text in self.doc.highlighter:each_token(line) do
     local color = style.syntax[type]
     local font = style.syntax_fonts[type] or default_font
     -- do not render newline, fixes issue #1164
     if tidx == last_token then text = text:sub(1, -2) end
-    tx = renderer.draw_text(surface, font, text, tx, ty, color)
+    if x_tile + tile_w > self.position.x then
+      -- the tile is visible on the screen: get its surface and draw the text
+      local surface = self:surface_for_content(tile_i, tile_j)
+      tx = renderer.draw_text(surface, font, text, tx, ty, color)
+    else
+      -- the tile is *not* visible yet, just increment the x coordinate without
+      -- drawing anything and do not recall the surface either.
+      tx = tx + font:get_width(text)
+    end
     local new_tile_i = self:get_tile_indexes(tx, ty)
     for tile_run_i = tile_i + 1, new_tile_i do
       -- Here means we crossed the boundary between tiles: redraw text in
       -- the tiles we overflown into.
       -- Note: the fact that "tx" is in a new tile does not necessarily means the
       -- text overflowed into a new tile but this a limiting case.
-      surface = self:surface_for_content(tile_run_i, tile_j)
+      local surface = self:surface_for_content(tile_run_i, tile_j)
       renderer.draw_text(surface, font, text, tx, ty, color)
     end
+    -- no need to call again self:get_screen_coordinates for x_tile: we directly
+    -- increment its value of the right amount
+    x_tile = x_tile + tile_w * (new_tile_i - tile_i)
     tile_i = new_tile_i
-    local x_tile = self:get_tile_limits(tile_i, tile_j)
-    x_tile = self:get_screen_coordinates(x_tile_l, 0)
     if x_tile > self.position.x + self.size.x then break end
   end
   return self:get_line_height()
@@ -640,7 +666,6 @@ function DocView:draw_line_body(line, x, y)
     end
   end
   if draw_highlight and core.active_view == self then
-    -- self:draw_line_highlight(x + self.scroll.x, y)
     self:draw_line_highlight(x, y)
   end
 
