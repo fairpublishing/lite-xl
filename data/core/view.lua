@@ -4,48 +4,6 @@ local common = require "core.common"
 local Object = require "core.object"
 local Scrollbar = require "core.scrollbar"
 
----@class core.view.position
----@field x number
----@field y number
-
----@class core.view.scroll
----@field x number
----@field y number
----@field to core.view.position
-
----@class core.view.thumbtrack
----@field thumb number
----@field track number
-
----@class core.view.thumbtrackwidth
----@field thumb number
----@field track number
----@field to core.view.thumbtrack
-
----@class core.view.scrollbar
----@field x core.view.thumbtrack
----@field y core.view.thumbtrack
----@field w core.view.thumbtrackwidth
----@field h core.view.thumbtrack
-
----@alias core.view.cursor "'arrow'" | "'ibeam'" | "'sizeh'" | "'sizev'" | "'hand'"
-
----@alias core.view.mousebutton "'left'" | "'right'"
-
----@alias core.view.context "'application'" | "'session'"
-
----Base view.
----@class core.view : core.object
----@field context core.view.context
----@field super core.object
----@field position core.view.position
----@field size core.view.position
----@field scroll core.view.scroll
----@field cursor core.view.cursor
----@field scrollable boolean
----@field v_scrollbar core.scrollbar
----@field h_scrollbar core.scrollbar
----@field current_scale number
 local View = Object:extend()
 
 -- context can be "application" or "session". The instance of objects
@@ -59,10 +17,76 @@ function View:new()
   self.scroll = { x = 0, y = 0, to = { x = 0, y = 0 } }
   self.cursor = "arrow"
   self.scrollable = false
-  self.v_scrollbar = Scrollbar({direction = "v", alignment = "e"})
-  self.h_scrollbar = Scrollbar({direction = "h", alignment = "e"})
+  self.v_scrollbar = Scrollbar({direction = "v"})
+  self.h_scrollbar = Scrollbar({direction = "h"})
   self.current_scale = SCALE
+
+  -- reference systems variables
+  self.ref_system = { stack = { }, x = 0, y = 0 }
+  self.named_ref_system = { }
+
+  -- drawing surfaces variables
+  self.named_surfaces = { }
+  self.surface_to_draw = { }
 end
+
+
+function View:push_reference_system(dx, dy, name)
+  table.insert(self.ref_system.stack, {dx, dy})
+  self.ref_system.x, self.ref_system.y = self.ref_system.x + dx, self.ref_system.y + dy
+  if name then
+    self.named_ref_system[name] = { x = self.ref_system.x, y = self.ref_system.y }
+  end
+end
+
+
+function View:pop_reference_system()
+  dx, dy = table.unpack(table.remove(self.ref_system.stack))
+  self.ref_system.x, self.ref_system.y = self.ref_system.x - dx, self.ref_system.y - dy
+end
+
+
+function View:get_screen_coordinates(x, y, name)
+  local ref_system = name and self.named_ref_system[name] or self.ref_system
+  return ref_system.x + x, ref_system.y + y
+end
+
+
+-- Ensure the surface is set to be actually "presented" and draw the
+-- background when first used.
+function View:set_surface_to_draw(surface, surface_id, x, y, w, h, background)
+  if not self.surface_to_draw[surface_id] then
+    -- If the surface_id was not in surface_to_draw that means it is the first time
+    -- this surface is used in the draw() round: we take this opportunity to draw
+    -- it background so that it is done only once for the draw() round.
+    renderer.draw_rect(surface, 0, 0, w, h, background or style.background)
+    local x_screen, y_screen = self:get_screen_coordinates(x, y)
+    self.surface_to_draw[surface_id] = { surface = surface, x = x_screen, y = y_screen }
+  end
+end
+
+
+function DocView:surface_for(name, w, h)
+  local surface = self.named_surfaces[name]
+  local surf_w, surf_h
+  if surface then
+    surf_w, surf_h = surface.get_size()
+  end
+  if not surface or surf_w ~= w or surf_h ~= h then
+    surface = renderer.surface.create(0, 0, w, h)
+    self.named_surfaces[name] = surface
+  end
+  return surface
+end
+
+
+function View:present_surfaces()
+  for id, surface in pairs(self.surface_to_draw) do
+    renderer.present_surface(surface.surface, surface.x, surface.y)
+  end
+  self.surface_to_draw = { }
+end
+
 
 function View:move_towards(t, k, dest, rate, name)
   if type(t) ~= "table" then
@@ -245,14 +269,14 @@ function View:get_content_bounds()
 end
 
 
-function View:get_content_abs_offset()
+function View:get_content_offset()
   local x = common.round(self.position.x - self.scroll.x)
   local y = common.round(self.position.y - self.scroll.y)
   return x, y
 end
 
 
-function View:get_content_offset()
+function View:get_content_rel_offset()
   local x = common.round(-self.scroll.x)
   local y = common.round(-self.scroll.y)
   return x, y
@@ -296,11 +320,11 @@ end
 
 
 ---@param color renderer.color
-function View:draw_background(color)
-  local x, y = self.position.x, self.position.y
-  local w, h = self.size.x, self.size.y
-  renderer.draw_rect(x, y, w, h, color)
-end
+-- function View:draw_background(color)
+--   local x, y = self.position.x, self.position.y
+--   local w, h = self.size.x, self.size.y
+--   renderer.draw_rect(x, y, w, h, color)
+-- end
 
 
 function View:draw_scrollbar()

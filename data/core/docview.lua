@@ -40,39 +40,55 @@ function DocView:get_tile_limits(tile_i, tile_j)
 end
 
 
-function DocView:push_reference_system(dx, dy)
-  table.insert(self.ref_system.stack, {dx, dy})
-  self.ref_system.x, self.ref_system.y = self.ref_system.x + dx, self.ref_system.y + dy
-end
-
-
-function DocView:pop_reference_system()
-  dx, dy = table.unpack(table.remove(self.ref_system.stack))
-  self.ref_system.x, self.ref_system.y = self.ref_system.x - dx, self.ref_system.y - dy
-end
-
-
-function DocView:get_screen_coordinates(x, y)
-  return self.ref_system.x + x, self.ref_system.y + y
-end
-
-
--- Ensure the surface is set to be actually "presented" and draw the
--- background when first used.
-function DocView:set_surface_to_draw(surface, tile_id, x, y, w, h, background)
-  if not self.surface_to_draw[tile_id] then
-    -- If the tile_id was not in surface_to_draw that means it is the first time
-    -- this surface is used in the draw() round: we take this opportunity to draw
-    -- it background so that it is done only once for the draw() round.
-    renderer.draw_rect(surface, 0, 0, w, h, background or style.background)
-    local x_screen, y_screen = self:get_screen_coordinates(x, y)
-    self.surface_to_draw[tile_id] = { surface, x_screen, y_screen }
-  end
-end
-
-
 function DocView:get_tile_size()
   return self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+end
+
+
+-- return true if text is too far-off in a tile on the right
+function DocView:draw_line_content_text(font, text, x, y, color)
+  local tile_w, tile_h = self:get_tile_size()
+  local tile_i, tile_j = self:get_tile_indexes(x, y)
+
+  -- compute x_tile_s as the screen's x coordinate of the left border of the tile
+  local x_tile_c = tile_w * (tile_i - 1)
+  local x_tile_s = self:get_screen_coordinates(x_tile_c, 0)
+  local x_rlimit_s = self.position.x + self.size.x
+
+  local x_text_end
+  while x_tile_s < x_rlimit_s and (not x_text_end or x_tile_c < x_text_end) do
+    if x_tile_s + tile_w > self.position.x then
+      -- the tile is visible on the screen: get its surface and draw on it
+      local surface = self:surface_for_content(tile_i, tile_j)
+      x_text_end = renderer.draw_text(surface, font, text, x, y, color)
+    end
+    x_tile_c = x_tile_c + tile_w
+    x_tile_s = x_tile_s + tile_w
+    tile_i = tile_i + 1
+  end
+
+  return x_tile_s >= x_rlimit_s
+end
+
+
+function DocView:draw_line_content_rect(x, y, w, h, color)
+  local tile_w, tile_h = self:get_tile_size()
+  local tile_i, tile_j = self:get_tile_indexes(x, y)
+
+  -- compute x_tile_s as the screen's x coordinate of the left border of the tile
+  local x_tile_c = tile_w * (tile_i - 1)
+  local x_tile_s = self:get_screen_coordinates(x_tile_c, 0)
+
+  while x_tile_s < self.position.x + self.size.x and x_tile_c < x + w do
+    if x_tile_s + tile_w > self.position.x then
+      -- the tile is visible on the screen: get its surface and draw on it
+      local surface = self:surface_for_content(tile_i, tile_j)
+      renderer.draw_rect(surface, x, y, w, h, color)
+    end
+    x_tile_c = x_tile_c + tile_w
+    x_tile_s = x_tile_s + tile_w
+    tile_i = tile_i + 1
+  end
 end
 
 
@@ -109,20 +125,6 @@ function DocView:surface_for_gutter(tile_j)
   end
   local tile_id = "gutter " + tostring(tile_j)
   self:set_surface_to_draw(surface, tile_id, x, y, w, h)
-  return surface
-end
-
-
-function DocView:surface_for(name, w, h)
-  local surface = self.named_surfaces[name]
-  local surf_w, surf_h
-  if surface then
-    surf_w, surf_h = surface.get_size()
-  end
-  if not surface or surf_w ~= w or surf_h ~= h then
-    surface = renderer.surface.create(0, 0, w, h)
-    self.named_surfaces[name] = surface
-  end
   return surface
 end
 
@@ -189,7 +191,7 @@ function DocView:new(doc)
   self.hovering_gutter = false
   self.tiles_metric = { line_height = 0, char_width = 0 }
   self.content_surfaces = { }
-  self.ref_system = { stack = { }, x = 0, y = 0 }
+  self.gutter_surfaces = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
   self.h_scrollbar:set_forced_status(config.force_scrollbar_status)
 end
@@ -265,22 +267,8 @@ function DocView:get_gutter_width()
 end
 
 
--- In principle SHOULD BE NO LONGER USED. We never want screen coordinates.
-function DocView:get_line_screen_position(line, col)
-  local x, y = self:get_content_abs_offset()
-  local lh = self:get_line_height()
-  local gw = self:get_gutter_width()
-  y = y + (line-1) * lh + style.padding.y
-  if col then
-    return x + gw + self:get_col_x_offset(line, col), y
-  else
-    return x + gw, y
-  end
-end
-
-
 function DocView:get_line_content_position(line, col)
-  local x, y = 0, 0 -- self:get_content_offset()
+  local x, y = 0, 0
   local lh = self:get_line_height()
   y = y + (line-1) * lh + style.padding.y
   if col then
@@ -288,6 +276,12 @@ function DocView:get_line_content_position(line, col)
   else
     return x, y
   end
+end
+
+
+function DocView:get_line_screen_position(line, col)
+  local x, y = self:get_line_content_position(line, col)
+  return self:get_screen_coordinates(x, y, "content")
 end
 
 
@@ -372,7 +366,7 @@ end
 
 
 function DocView:resolve_screen_position(x, y)
-  local ox, oy = self:get_line_screen_position(true, 1)
+  local ox, oy = self:get_line_screen_position(1)
   local line = math.floor((y - oy) / self:get_line_height()) + 1
   line = common.clamp(line, 1, #self.doc.lines)
   local col = self:get_x_offset_col(line, x - ox)
@@ -383,10 +377,9 @@ end
 function DocView:scroll_to_line(line, ignore_if_visible, instant)
   local min, max = self:get_visible_line_range()
   if not (ignore_if_visible and line > min and line < max) then
-    local x, y = self:get_line_screen_position(false, line)
-    local ox, oy = self:get_content_offset()
+    local x, y = self:get_line_content_position(line)
     local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
-    self.scroll.to.y = math.max(0, y - oy - (self.size.y - scroll_h) / 2)
+    self.scroll.to.y = math.max(0, y - (self.size.y - scroll_h) / 2)
     if instant then
       self.scroll.y = self.scroll.to.y
     end
@@ -395,14 +388,15 @@ end
 
 
 function DocView:scroll_to_make_visible(line, col)
-  local _, oy = self:get_content_offset()
-  local _, ly = self:get_line_screen_position(false, line, col)
+  local _, ly = self:get_line_content_position(line, col)
+  -- local _, oy = self:get_content_offset()
+  -- local _, ly = self:get_line_screen_position(line, col)
   local lh = self:get_line_height()
   local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
-  self.scroll.to.y = common.clamp(self.scroll.to.y, ly - oy - self.size.y + scroll_h + lh * 2, ly - oy - lh)
-  local gw = self:get_gutter_width()
+  self.scroll.to.y = common.clamp(self.scroll.to.y, ly - self.size.y + scroll_h + lh * 2, ly - lh)
+  local gw = 0 -- self:get_gutter_width()
   local xoffset = self:get_col_x_offset(line, col)
-  local xmargin = 3 * self:get_font():get_width(' ')
+  local xmargin = 3 * self:tiles_metric.char_width
   local xsup = xoffset + gw + xmargin
   local xinf = xoffset - xmargin
   local _, _, scroll_w = self.v_scrollbar:get_track_rect()
@@ -569,26 +563,12 @@ function DocView:update()
 end
 
 
-function DocView:draw_line_highlight(x, y)
-  local tile_w, tile_h = self:get_tile_size()
-  local tile_i, tile_j = self:get_tile_indexes(x, y + self:get_line_text_y_offset())
-
-  -- compute x_tile as the screen's x coordinate of the left border of the tile
-  local x_tile = self:get_tile_limits(tile_i, tile_j)
-  x_tile = self:get_screen_coordinates(x_tile, 0)
-
-  -- We use below the same logic used in draw_line_text: we proceed from the left-most
-  -- side of the content but draw only if tile is visible.
-  -- We stop when the x coordinate of the new tile is outside of the screen.
-  repeat
-    if x_tile + tile_w > self.position.x then
-      local surface = self:surface_for_content(tile_i, tile_j)
-      renderer.draw_rect(surface, 0, y, tile_w, tile_h, style.line_highlight)
-    end
-    tile_i = tile_i + 1
-    x = x + tile_w
-    x_tile = x_tile + tile_w
-  until x_tile > self.position.x + self.size.x
+function DocView:draw_line_highlight(y)
+  local tile_w = self:get_tile_size()
+  -- Note: below we may set w to math.huge
+  local w = self.position.x + self.size_x + tile_w - self.ref_system.x
+  local h = self.tiles_metric.line_height
+  self:draw_line_content_rect(0, y, w, h, style.line_highlight)
 end
 
 
@@ -602,41 +582,14 @@ function DocView:draw_line_text(line, x, y)
   if string.sub(tokens[tokens_count], -1) == "\n" then
     last_token = tokens_count - 1
   end
-  local tile_i, tile_j = self:get_tile_indexes(tx, ty)
-  local tile_w, tile_h = self:get_tile_size()
-
-  -- compute x_tile as the screen's x coordinate of the left border of the tile
-  local x_tile = self:get_tile_limits(tile_i, tile_j)
-  x_tile = self:get_screen_coordinates(x_tile, 0)
 
   for tidx, type, text in self.doc.highlighter:each_token(line) do
     local color = style.syntax[type]
     local font = style.syntax_fonts[type] or default_font
     -- do not render newline, fixes issue #1164
     if tidx == last_token then text = text:sub(1, -2) end
-    if x_tile + tile_w > self.position.x then
-      -- the tile is visible on the screen: get its surface and draw the text
-      local surface = self:surface_for_content(tile_i, tile_j)
-      tx = renderer.draw_text(surface, font, text, tx, ty, color)
-    else
-      -- the tile is *not* visible yet, just increment the x coordinate without
-      -- drawing anything and do not recall the surface either.
-      tx = tx + font:get_width(text)
-    end
-    local new_tile_i = self:get_tile_indexes(tx, ty)
-    for tile_run_i = tile_i + 1, new_tile_i do
-      -- Here means we crossed the boundary between tiles: redraw text in
-      -- the tiles we overflown into.
-      -- Note: the fact that "tx" is in a new tile does not necessarily means the
-      -- text overflowed into a new tile but this a limiting case.
-      local surface = self:surface_for_content(tile_run_i, tile_j)
-      renderer.draw_text(surface, font, text, tx, ty, color)
-    end
-    -- no need to call again self:get_screen_coordinates for x_tile: we directly
-    -- increment its value of the right amount
-    x_tile = x_tile + tile_w * (new_tile_i - tile_i)
-    tile_i = new_tile_i
-    if x_tile > self.position.x + self.size.x then break end
+    local is_off_screen_right = self:draw_line_content_text(font, text, tx, ty, color)
+    if is_off_screen_right then break end
   end
   return self:get_line_height()
 end
@@ -666,11 +619,11 @@ function DocView:draw_line_body(line, x, y)
     end
   end
   if draw_highlight and core.active_view == self then
-    self:draw_line_highlight(x, y)
+    self:draw_line_highlight(y)
   end
 
   -- draw selection if it overlaps this line
-  local lh = self:get_line_height()
+  local lh = self.tiles_metric.line_height
   for lidx, line1, col1, line2, col2 in self.doc:get_selections(true) do
     if line >= line1 and line <= line2 then
       local text = self.doc.lines[line]
@@ -679,6 +632,7 @@ function DocView:draw_line_body(line, x, y)
       local x1 = x + self:get_col_x_offset(line, col1)
       local x2 = x + self:get_col_x_offset(line, col2)
       if x1 ~= x2 then
+        self:draw_line_content_rect(x1, y, x2 - x1, lh, style.selection)
         renderer.draw_rect(x1, y, x2 - x1, lh, style.selection)
       end
     end
@@ -709,7 +663,8 @@ end
 
 
 function DocView:draw_ime_decoration(line1, col1, line2, col2)
-  local x, y = self:get_line_screen_position(true, line1)
+  -- FIXME: to be adapted to new graphics system
+  local x, y = self:get_line_content_position(line1)
   local line_size = math.max(1, SCALE)
   local lh = self:get_line_height()
 
@@ -740,12 +695,12 @@ function DocView:draw_overlay()
     for _, line1, col1, line2, col2 in self.doc:get_selections() do
       if line1 >= minline and line1 <= maxline
       and system.window_has_focus() then
-        if ime.editing then
+        if false and ime.editing then
           self:draw_ime_decoration(line1, col1, line2, col2)
         else
           if config.disable_blink
           or (core.blink_timer - core.blink_start) % T < T / 2 then
-            self:draw_caret(self:get_line_screen_position(true, line1, col1))
+            self:draw_caret(self:get_line_content_position(line1, col1))
           end
         end
       end
@@ -770,13 +725,14 @@ function DocView:draw()
   local maxline = math.floor((visible_maxline - 1) / TILE_LINES + 1) * TILE_LINES
 
   local x, y = self:get_line_content_position(minline)
+  self.push_reference_system(0, -self.scroll.y)
   local gw = self.tiles_metric.gutter_width
   for i = minline, maxline do
     y = y + (self:draw_line_gutter(i, 0, y, gw) or lh)
   end
 
   -- To draw the content we move the the content system.
-  self.push_reference_system(gw - self.scroll.x, -self.scroll.y)
+  self.push_reference_system(gw - self.scroll.x, 0, "content")
   -- local pos = self.position
   x, y = self:get_line_content_position(minline)
   -- the clip below ensure we don't write on the gutter region. On the
@@ -786,12 +742,14 @@ function DocView:draw()
   for i = minline, maxline do
     y = y + (self:draw_line_body(i, x, y) or lh)
   end
-  self.pop_reference_system()
   self:draw_overlay()
+  self.pop_reference_system()
+  self.pop_reference_system()
+  self.pop_reference_system()
   -- core.pop_clip_rect()
 
   self:draw_scrollbar()
-  self.pop_reference_system()
+  self:present_surfaces()
 end
 
 

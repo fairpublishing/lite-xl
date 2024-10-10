@@ -296,6 +296,8 @@ static int f_begin_frame(lua_State *L) {
 }
 
 
+// FIXME: should no longer be called because it is integrated in
+// f_present_surface
 static int f_end_frame(lua_State *L) {
   RenSurface *rs = check_rensurface(L, 1);
   RenCache *rencache = &rs->rencache;
@@ -375,9 +377,19 @@ static int f_present_surface(lua_State *L) {
   RenSurface *rs = check_rensurface(L, 1);
   lua_Number x = luaL_checknumber(L, 2);
   lua_Number y = luaL_checknumber(L, 3);
-  ren_present_surface(&window_renderer, rs, x, y);
+  rencache_end_frame(&rs->rencache, rs);
+  rencache_update_rects(&rs->rencache, rs);
+  rencache_swap_buffers(&rs->rencache);
+  renwin_render_surface(&window_renderer, rs, x, y);
   return 0;
 }
+
+
+static int f_present_window(lua_State *L) {
+  renwin_present(&window_renderer);
+  return 0;
+}
+
 
 static const luaL_Reg lib[] = {
   { "show_debug",         f_show_debug         },
@@ -389,6 +401,7 @@ static const luaL_Reg lib[] = {
   { "draw_rect",          f_draw_rect          },
   { "draw_text",          f_draw_text          },
   { "present_surface" ,   f_present_surface    },
+  { "present_window",     f_present_window     },
   { NULL,                 NULL                 }
 };
 

@@ -271,7 +271,7 @@ RenFont* ren_font_load(RenWindow *window_renderer, const char* path, float size,
   if (FT_Open_Face(library, &(FT_Open_Args){ .flags = FT_OPEN_STREAM, .stream = &font->stream }, 0, &face))
     goto failure;
 
-  const int surface_scale = renwin_get_surface(window_renderer)->scale;
+  const int surface_scale = window_renderer->scale;
   const float scaled_size = roundf(size * surface_scale);
   if (FT_Set_Pixel_Sizes(face, 0, scaled_size))
     goto failure;
@@ -359,7 +359,7 @@ float ren_font_group_get_size(RenFont **fonts) {
 }
 
 void ren_font_group_set_size(RenWindow *window_renderer, RenFont **fonts, float size) {
-  const int surface_scale = renwin_get_surface(window_renderer)->scale;
+  const int surface_scale = window_renderer->scale;
   for (int i = 0; i < FONT_FALLBACK_MAX && fonts[i]; ++i) {
     font_clear_glyph_cache(fonts[i]);
     FT_Face face = fonts[i]->face;
@@ -550,25 +550,15 @@ void ren_init(SDL_Window *win) {
     return;
   }
   window_renderer.window = win;
-  renwin_init_surface(&window_renderer);
-  renwin_clip_to_surface(&window_renderer);
+  renwin_init_renderer(&window_renderer);
+  // renwin_clip_to_surface(&window_renderer);
   draw_rect_surface = SDL_CreateRGBSurface(0, 1, 1, 32,
                        0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
 }
 
 
 void ren_resize_window(RenWindow *window_renderer) {
-  renwin_resize_surface(window_renderer);
-}
-
-
-void ren_present_surface(RenWindow *window_renderer, RenSurface *rs, int x, int y) {
-  static bool initial_frame = true;
-  if (initial_frame) {
-    renwin_show_window(window_renderer);
-    initial_frame = false;
-  }
-  renwin_render_surface(window_renderer, rs, x, y);
+  renwin_resize_window(window_renderer);
 }
 
 

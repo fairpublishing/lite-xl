@@ -18,7 +18,7 @@ typedef struct RenCache {
     uint8_t *command_buf;
     bool resize_issue;
     int command_buf_idx;
-    RenRect screen_rect;
+    RenRect surface_rect;
     RenRect last_clip_rect;
     int rect_count;
     int x_origin, y_origin;

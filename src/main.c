@@ -265,21 +265,21 @@ init_lua:
     exit(1);
   }
   lua_pcall(L, 0, 1, 0);
-  RenSurface *rs = renwin_get_surface(&window_renderer);
-  RenCache *rencache = &rs->rencache;
+  // RenSurface *rs = renwin_get_surface(&window_renderer);
+  // RenCache *rencache = &rs->rencache;
   if (lua_toboolean(L, -1)) {
     lua_close(L);
-    rencache_invalidate(rencache);
+    // rencache_invalidate(rencache);
     goto init_lua;
   }
 
   // This allows the window to be destroyed before lite-xl is done with
   // reaping child processes
   ren_free_window_resources(&window_renderer);
-  if (rencache) {
-    rencache_destroy(rencache);
-    rencache = NULL;
-  }
+  // if (rencache) {
+  //   rencache_destroy(rencache);
+  //   rencache = NULL;
+  // }
   lua_close(L);
 
   return EXIT_SUCCESS;

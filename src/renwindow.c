@@ -14,38 +14,14 @@ int renwin_get_size(RenWindow *ren, int *w_pixels, int *h_pixels) {
 }
 
 
-void renwin_init_surface(RenWindow *ren) {
-  int w_pixels, h_pixels;
+void renwin_init_renderer(RenWindow *ren) {
   /* We assume here "ren" is zero-initialized */
   ren->renderer = SDL_CreateRenderer(ren->window, -1, 0);
-  ren->scale = renwin_get_size(ren, &w_pixels, &h_pixels);
-  rensurf_init(&ren->rensurface, 0, 0);
-  rensurf_setup(&ren->rensurface, ren->renderer, w_pixels, h_pixels, ren->scale);
+  ren->scale = renwin_get_size(ren, &ren->w_pixels, &ren->h_pixels);
 }
 
-
-void renwin_clip_to_surface(RenWindow *ren) {
-  SDL_SetClipRect(renwin_get_surface(ren)->surface, NULL);
-}
-
-
-RenSurface *renwin_get_surface(RenWindow *ren) {
-  return &ren->rensurface;
-}
-
-void renwin_resize_surface(UNUSED RenWindow *ren) {
-  int new_w, new_h;
-  int scale = renwin_get_size(ren, &new_w, &new_h);
-  /* Note that (w, h) may differ from (new_w, new_h) on retina displays. */
-  if (scale != ren->scale || new_w != ren->rensurface.surface->w || new_h != ren->rensurface.surface->h) {
-    ren->scale = scale;
-    rensurf_setup(&ren->rensurface, ren->renderer, new_w, new_h, ren->scale);
-    renwin_clip_to_surface(ren);
-  }
-}
-
-void renwin_show_window(RenWindow *ren) {
-  SDL_ShowWindow(ren->window);
+void renwin_resize_window(RenWindow *ren) {
+  ren->scale = renwin_get_size(ren, &ren->w_pixels, &ren->h_pixels);
 }
 
 void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
@@ -54,8 +30,16 @@ void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
   const int dx = (x < 0 ? -x : 0);
   const int dy = (y < 0 ? -y : 0);
   const SDL_Rect src = { dx    , dy    , w - dx, h - dy };
-  const SDL_Rect dst = { x - dx, y - dy, w - dx, h - dy };
-  SDL_RenderCopy(ren->renderer, ren->rensurface.texture, &src, &dst);
+  const SDL_Rect dst = { x + dx, y + dy, w - dx, h - dy };
+  SDL_RenderCopy(ren->renderer, rs->texture, &src, &dst);
+}
+
+void renwin_present(RenWindow *ren) {
+  static bool initial_frame = true;
+  if (initial_frame) {
+    SDL_ShowWindow(ren->window);
+    initial_frame = false;
+  }
   SDL_RenderPresent(ren->renderer);
 }
 
@@ -63,5 +47,4 @@ void renwin_free(RenWindow *ren) {
   SDL_DestroyWindow(ren->window);
   ren->window = NULL;
   SDL_DestroyRenderer(ren->renderer);
-  rensurf_free(&ren->rensurface);
 }
