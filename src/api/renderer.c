@@ -307,7 +307,7 @@ static int f_end_frame(lua_State *L) {
   return 0;
 }
 
-static int f_clear_font_refs(UNUSED lua_State *L) {
+static int f_clear_font_refs(lua_State *L) {
   // clear the font reference table
   lua_newtable(L);
   lua_rawseti(L, LUA_REGISTRYINDEX, RENDERER_FONT_REF);
@@ -390,6 +390,34 @@ static int f_present_window(lua_State *L) {
   return 0;
 }
 
+static int f_render_fill_rect(lua_State *L) {
+  lua_Number x = luaL_checknumber(L, 1);
+  lua_Number y = luaL_checknumber(L, 2);
+  lua_Number w = luaL_checknumber(L, 3);
+  lua_Number h = luaL_checknumber(L, 4);
+  RenColor color = checkcolor(L, 5, 255);
+
+  SDL_Rect rect = {(int)x, (int)y, (int)w, (int)h};
+  SDL_Color sdl_color = {color.r, color.g, color.b, color.a};
+  renwin_render_fill_rect(&window_renderer, &rect, sdl_color);
+
+  return 0;
+}
+
+static int f_set_viewport(lua_State *L) {
+  int nargs = lua_gettop(L);
+  if (nargs == 0) {
+    renwin_set_viewport(&window_renderer, NULL);
+  } else {
+    lua_Number x = luaL_checknumber(L, 1);
+    lua_Number y = luaL_checknumber(L, 2);
+    lua_Number w = luaL_checknumber(L, 3);
+    lua_Number h = luaL_checknumber(L, 4);
+    renwin_set_viewport(&window_renderer, &(SDL_Rect){ x, y, w, h });
+  }
+  return 0;
+}
+
 
 static const luaL_Reg lib[] = {
   { "show_debug",         f_show_debug         },
@@ -400,8 +428,10 @@ static const luaL_Reg lib[] = {
   { "set_clip_rect",      f_set_clip_rect      },
   { "draw_rect",          f_draw_rect          },
   { "draw_text",          f_draw_text          },
+  { "set_viewport",       f_set_viewport       },
   { "present_surface" ,   f_present_surface    },
   { "present_window",     f_present_window     },
+  { "render_fill_rect",   f_render_fill_rect   },
   { NULL,                 NULL                 }
 };
 

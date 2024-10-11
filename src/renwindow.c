@@ -43,8 +43,17 @@ void renwin_present(RenWindow *ren) {
   SDL_RenderPresent(ren->renderer);
 }
 
+void renwin_set_viewport(RenWindow *ren, const SDL_Rect *r) {
+  SDL_RenderSetViewport(ren->renderer, r);
+}
+
 void renwin_free(RenWindow *ren) {
   SDL_DestroyWindow(ren->window);
   ren->window = NULL;
   SDL_DestroyRenderer(ren->renderer);
+}
+
+void renwin_render_fill_rect(RenWindow *ren, SDL_Rect *rect, SDL_Color color) {
+  SDL_SetRenderDrawColor(ren->renderer, color.r, color.g, color.b, color.a);
+  SDL_RenderFillRect(ren->renderer, rect);
 }
