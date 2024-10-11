@@ -9,6 +9,8 @@ local View = require "core.view"
 ---@class core.node : core.object
 local Node = Object:extend()
 
+Node.next_id = 0
+
 function Node:new(type)
   self.type = type or "leaf"
   self.position = { x = 0, y = 0 }
@@ -24,7 +26,27 @@ function Node:new(type)
   self.tab_offset = 1
   self.tab_width = style.tab_width
   self.move_towards = View.move_towards
+  self.id = -1
 end
+
+
+function Node:get_id()
+  if self.id >= 0 then return end
+  self.id = Node.next_id
+  Node.next_id = Node.next_id + 1
+end
+
+-- function Node:assign_ids(current_id)
+--   current_id = current_id or 0
+--   self.id = current_id
+-- 
+--   if self.type ~= "leaf" then
+--     current_id = self.a:assign_ids(current_id + 1)
+--     current_id = self.b:assign_ids(current_id + 1)
+--   end
+-- 
+--   return current_id
+-- end
 
 
 function Node:propagate(fn, ...)
@@ -321,18 +343,24 @@ end
 
 
 function Node:get_scroll_button_rect(index)
+  local x, y, w, h, pad = self:get_rel_scroll_button_rect(index)
+  return self.position.x + x, self.position.y + y, w, h, pad
+end
+
+
+function Node:get_rel_scroll_button_rect(index)
   local w, pad = get_scroll_button_width()
   local h = style.font:get_height() + style.padding.y * 2
-  local x = self.position.x + (index == 1 and self.size.x - w * 2 or self.size.x - w)
-  return x, self.position.y, w, h, pad
+  local x = (index == 1 and self.size.x - w * 2 or self.size.x - w)
+  return x, 0, w, h, pad
 end
 
 
 function Node:get_tab_rect(idx)
   local maxw = self.size.x
-  local x0 = self.position.x
-  local x1 = x0 + common.clamp(self.tab_width * (idx - 1) - self.tab_shift, 0, maxw)
-  local x2 = x0 + common.clamp(self.tab_width * idx - self.tab_shift, 0, maxw)
+  -- local x0 = self.position.x
+  local x1 = common.clamp(self.tab_width * (idx - 1) - self.tab_shift, 0, maxw)
+  local x2 = common.clamp(self.tab_width * idx - self.tab_shift, 0, maxw)
   local h = style.font:get_height() + style.padding.y * 2
   return x1, self.position.y, x2 - x1, h
 end
@@ -492,7 +520,7 @@ function Node:update()
   end
 end
 
-function Node:draw_tab_title(view, font, is_active, is_hovered, x, y, w, h)
+function Node:draw_tab_title(surface, view, font, is_active, is_hovered, x, y, w, h)
   local text = view and view:get_name() or ""
   local dots_width = font:get_width("…")
   local align = "center"
@@ -509,91 +537,109 @@ function Node:draw_tab_title(view, font, is_active, is_hovered, x, y, w, h)
   local color = style.dim
   if is_active then color = style.text end
   if is_hovered then color = style.text end
-  common.draw_text(font, color, text, align, x, y, w, h)
+  common.draw_text(surface, font, color, text, align, x, y, w, h)
 end
 
-function Node:draw_tab_borders(view, is_active, is_hovered, x, y, w, h, standalone)
+function Node:draw_tab_borders(surface, view, is_active, is_hovered, x, y, w, h, standalone)
   -- Tabs deviders
   local ds = style.divider_size
   local color = style.dim
   local padding_y = style.padding.y
-  renderer.draw_rect(x + w, y + padding_y, ds, h - padding_y*2, style.dim)
+  renderer.draw_rect(surface, x + w, y + padding_y, ds, h - padding_y*2, style.dim)
   if standalone then
-    renderer.draw_rect(x-1, y-1, w+2, h+2, style.background2)
+    renderer.draw_rect(surface, x-1, y-1, w+2, h+2, style.background2)
   end
   -- Full border
   if is_active then
     color = style.text
-    renderer.draw_rect(x, y, w, h, style.background)
-    renderer.draw_rect(x + w, y, ds, h, style.divider)
-    renderer.draw_rect(x - ds, y, ds, h, style.divider)
+    renderer.draw_rect(surface, x, y, w, h, style.background)
+    renderer.draw_rect(surface, x + w, y, ds, h, style.divider)
+    renderer.draw_rect(surface, x - ds, y, ds, h, style.divider)
   end
   return x + ds, y, w - ds*2, h
 end
 
-function Node:draw_tab(view, is_active, is_hovered, is_close_hovered, x, y, w, h, standalone)
-  x, y, w, h = self:draw_tab_borders(view, is_active, is_hovered, x, y, w, h, standalone)
+function Node:draw_tab(surface, view, is_active, is_hovered, is_close_hovered, x, y, w, h, standalone)
+  x, y, w, h = self:draw_tab_borders(surface, view, is_active, is_hovered, x, y, w, h, standalone)
   -- Close button
   local cx, cw, cpad = close_button_location(x, w)
   local show_close_button = ((is_active or is_hovered) and not standalone and config.tab_close_button)
   if show_close_button then
     local close_style = is_close_hovered and style.text or style.dim
-    common.draw_text(style.icon_font, close_style, "C", nil, cx, y, cw, h)
+    common.draw_text(surface, style.icon_font, close_style, "C", nil, cx, y, cw, h)
   end
   -- Title
   x = x + cpad
   w = cx - x
-  core.push_clip_rect(x, y, w, h)
-  self:draw_tab_title(view, style.font, is_active, is_hovered, x, y, w, h)
+  -- We really want to keep the following clip operation even with the new
+  -- graphical architecture one-surface-for-each-view to cut the text that may
+  -- overflow.
+  core.push_clip_rect(x, y, w, h) -- FIXME: we need to specify the surface!!
+  self:draw_tab_title(surface, view, style.font, is_active, is_hovered, x, y, w, h)
   core.pop_clip_rect()
 end
 
-function Node:draw_tabs()
+function Node:draw_tabs(view)
   local _, y, w, h, scroll_padding = self:get_scroll_button_rect(1)
   local x = self.position.x
   local ds = style.divider_size
   local dots_width = style.font:get_width("…")
-  core.push_clip_rect(x, y, self.size.x, h)
-  renderer.draw_rect(x, y, self.size.x, h, style.background2)
-  renderer.draw_rect(x, y + h - ds, self.size.x, ds, style.divider)
+  -- core.push_clip_rect(x, y, self.size.x, h)
+  core.root_view:push_reference_system(x, y)
+
+  self:get_id() -- we need an id to draw tabs because we want a named surface
+  local surface_id = "tab" .. tostring(id)
+  local surface = view:surface_for(surface_id, self.size.x, h)
+  view:set_surface_to_draw(surface, surface_id, 0, 0, self.size.x, h, style.background2)
+
+  -- renderer.draw_rect(surface, 0, 0, self.size.x, h, style.background2)
+  renderer.draw_rect(surface, 0, h - ds, self.size.x, ds, style.divider)
   local tabs_number = self:get_visible_tabs_number()
 
   for i = self.tab_offset, self.tab_offset + tabs_number - 1 do
     local view = self.views[i]
     local x, y, w, h = self:get_tab_rect(i)
-    self:draw_tab(view, view == self.active_view,
+    self:draw_tab(surface, view, view == self.active_view,
                   i == self.hovered_tab, i == self.hovered_close,
                   x, y, w, h)
   end
 
   if #self.views > tabs_number then
     local _, pad = get_scroll_button_width()
-    local xrb, yrb, wrb, hrb = self:get_scroll_button_rect(1)
-    renderer.draw_rect(xrb + pad, yrb, wrb * 2, hrb, style.background2)
+    local xrb, yrb, wrb, hrb = self:get_rel_scroll_button_rect(1)
+    renderer.draw_rect(surface, xrb + pad, yrb, wrb * 2, hrb, style.background2)
     local left_button_style = (self.hovered_scroll_button == 1 and self.tab_offset > 1) and style.text or style.dim
-    common.draw_text(style.icon_font, left_button_style, "<", nil, xrb + scroll_padding, yrb, 0, h)
+    common.draw_text(surface, style.icon_font, left_button_style, "<", nil, xrb + scroll_padding, yrb, 0, h)
 
-    xrb, yrb, wrb = self:get_scroll_button_rect(2)
+    xrb, yrb, wrb = self:get_rel_scroll_button_rect(2)
     local right_button_style = (self.hovered_scroll_button == 2 and #self.views > self.tab_offset + tabs_number - 1) and style.text or style.dim
-    common.draw_text(style.icon_font, right_button_style, ">", nil, xrb + scroll_padding, yrb, 0, h)
+    common.draw_text(surface, style.icon_font, right_button_style, ">", nil, xrb + scroll_padding, yrb, 0, h)
   end
 
-  core.pop_clip_rect()
+  core.root_view:pop_reference_system()
+  -- core.pop_clip_rect()
 end
 
 
 function Node:draw()
   if self.type == "leaf" then
     if self:should_show_tabs() then
-      self:draw_tabs()
+      self:draw_tabs(core.root_view)
     end
     local pos, size = self.active_view.position, self.active_view.size
-    core.push_clip_rect(pos.x, pos.y, size.x, size.y)
+    -- core.push_clip_rect(pos.x, pos.y, size.x, size.y)
+    renderer.set_viewport(pos.x, pos.y, size.x, size.y)
     self.active_view:draw()
-    core.pop_clip_rect()
+    -- In theory we should reset the viewport but probably it is fine to leave it set.
+    -- Needs more investigations,
+    -- renderer.set_viewport()
+    -- core.pop_clip_rect()
   else
     local x, y, w, h = self:get_divider_rect()
-    renderer.draw_rect(x, y, w, h, style.divider)
+    -- directly draw the rectangle using the SDL renderer, without using
+    -- any surface or RenCache as intermediary.
+    renderer.render_fill_rect(x, y, w, h, style.divider)
+    -- renderer.draw_rect(x, y, w, h, style.divider)
     self:propagate("draw")
   end
 end

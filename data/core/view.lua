@@ -66,7 +66,7 @@ function View:set_surface_to_draw(surface, surface_id, x, y, w, h, background)
 end
 
 
-function DocView:surface_for(name, w, h)
+function View:surface_for(name, w, h)
   local surface = self.named_surfaces[name]
   local surf_w, surf_h
   if surface then
