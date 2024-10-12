@@ -21,12 +21,14 @@ local Scrollbar = Object:extend()
 
 ---@class ScrollbarOptions
 ---@field direction "v" | "h" @Vertical or Horizontal
+---@field alignment "s" | "e" @Start or End (left to right, top to bottom)
 ---@field force_status "expanded" | "contracted" | false @Force the scrollbar status
 ---@field expanded_size number? @Override the default value specified by `style.expanded_scrollbar_size`
 ---@field contracted_size number? @Override the default value specified by `style.scrollbar_size`
 
 ---@param options ScrollbarOptions
-function Scrollbar:new(options)
+function Scrollbar:new(view, options)
+  self.view = view -- parent's view
   ---Position information of the owner
   self.rect = {
     x = 0, y = 0, w = 0, h = 0,
@@ -50,6 +52,8 @@ function Scrollbar:new(options)
   self.hovering = { track = false, thumb = false }
   ---@type "v" | "h"@Vertical or Horizontal
   self.direction = options.direction or "v"
+  ---@type "s" | "e" @Start or End (left to right, top to bottom)
+  self.alignment = options.alignment or "e"
   ---@type number @Private. Used to keep track of animations
   self.expand_percent = 0
   ---@type "expanded" | "contracted" | false @Force the scrollbar status
@@ -59,6 +63,7 @@ function Scrollbar:new(options)
   self.contracted_size = options.contracted_size
   ---@type number? @Override the default value specified by `style.scrollbar_size`
   self.expanded_size = options.expanded_size
+  self.generic_name = self.direction .. "scrollbar"
 end
 
 
@@ -75,8 +80,14 @@ end
 function Scrollbar:real_to_normal(x, y, w, h)
   x, y, w, h = x or 0, y or 0, w or 0, h or 0
   if self.direction == "v" then
+    if self.alignment == "s" then
+      x = (self.rect.x + self.rect.w) - x - w
+    end
     return x, y, w, h
   else
+    if self.alignment == "s" then
+      y = (self.rect.y + self.rect.h) - y - h
+    end
     return y, x, h, w
   end
 end
@@ -85,32 +96,37 @@ end
 function Scrollbar:normal_to_real(x, y, w, h)
   x, y, w, h = x or 0, y or 0, w or 0, h or 0
   if self.direction == "v" then
+    if self.alignment == "s" then
+      x = (self.rect.x + self.rect.w) - x - w
+    end
     return x, y, w, h
   else
+    if self.alignment == "s" then
+      x = (self.rect.y + self.rect.h) - x - w
+    end
     return y, x, h, w
   end
-end
-
-
-function Scrollbar:get_across_size()
-  local min_size = self.contracted_size or style.scrollbar_size
-  local max_size = self.expanded_size or style.expanded_scrollbar_size
-  return min_size + (max_size - min_size) * self.expand_percent, max_size
 end
 
 
 function Scrollbar:_get_thumb_rect_normal()
   local nr = self.normal_rect
   local sz = nr.scrollable
-  if sz == math.huge or sz <= nr.along_size then
+  if sz == math.huge or sz <= nr.along_size
+  then
     return 0, 0, 0, 0
   end
-  local across_size, across_max_size = self:get_across_size()
+  local scrollbar_size = self.contracted_size or style.scrollbar_size
+  local expanded_scrollbar_size = self.expanded_size or style.expanded_scrollbar_size
   local along_size = math.max(20, nr.along_size * nr.along_size / sz)
-  local along = self.percent * nr.scrollable * (nr.along_size - along_size) / (sz - nr.along_size)
-  return 0, along, across_max_size, along_size
+  local across_size = scrollbar_size
+  across_size = across_size + (expanded_scrollbar_size - scrollbar_size) * self.expand_percent
+  return
+    nr.across + nr.across_size - across_size,
+    nr.along + self.percent * nr.scrollable * (nr.along_size - along_size) / (sz - nr.along_size),
+    across_size,
+    along_size
 end
-
 
 ---Get the thumb rect (the part of the scrollbar that can be dragged)
 ---@return integer,integer,integer,integer @x, y, w, h
@@ -125,8 +141,15 @@ function Scrollbar:_get_track_rect_normal()
   if sz <= nr.along_size or sz == math.huge then
     return 0, 0, 0, 0
   end
-  local _, across_max_size = self:get_across_size()
-  return 0, 0, across_max_size, nr.along_size
+  local scrollbar_size = self.contracted_size or style.scrollbar_size
+  local expanded_scrollbar_size = self.expanded_size or style.expanded_scrollbar_size
+  local across_size = scrollbar_size
+  across_size = across_size + (expanded_scrollbar_size - scrollbar_size) * self.expand_percent
+  return
+    nr.across + nr.across_size - across_size,
+    nr.along,
+    expanded_scrollbar_size,
+    nr.along_size
 end
 
 ---Get the track rect (the "background" of the scrollbar)
@@ -301,27 +324,23 @@ function Scrollbar:draw_track()
   local color = { table.unpack(style.scrollbar_track) }
   color[4] = color[4] * self.expand_percent
   local x, y, w, h = self:get_track_rect()
-  renderer.draw_rect(self.surface, x, y, w, h, color)
+  renderer.draw_rect(x, y, w, h, color)
 end
 
 ---Draw the scrollbar thumb
-function Scrollbar:draw_thumb()
+function Scrollbar:draw_thumb(surface)
   local highlight = self.hovering.thumb or self.dragging
   local color = highlight and style.scrollbar2 or style.scrollbar
   local x, y, w, h = self:get_thumb_rect()
-  renderer.draw_rect(self.surface, x, y, w, h, color)
+  renderer.draw_rect(surface, x, y, w, h, color)
 end
 
 ---Draw both the scrollbar track and thumb
 function Scrollbar:draw()
-  local across_size, across_max_size = self:get_across_size()
-  local nr = self.normal_rect
-  local x, y, w, h = normal_to_real(nr.across + nr.across_size - across_size, nr.along, across_max_size, nr.along_size)
-  self.surface = self.view:surface_for(self.direction .. "scrollbar", w, h)
-  self:push_reference_system(x, y)
-  self:draw_track()
-  self:draw_thumb()
-  self:pop_reference_system()
+  local x, y, w, h = self:get_track_rect()
+  local surface = self.view:surface_for(self.generic_name, x, y, w, h)
+  self:draw_track(surface)
+  self:draw_thumb(surface)
 end
 
 

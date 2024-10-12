@@ -40,7 +40,9 @@ void rensurf_free(RenSurface *rs) {
   SDL_FreeSurface(rs->surface);
 }
 
-void rensurf_get_size(RenSurface *rs, int *w, int *h) {
+void rensurf_get_rect(RenSurface *rs, int *x, int *y, int *w, int *h) {
+  *x = rs->rencache.x_origin;
+  *y = rs->rencache.y_origin;
   *w = rs->surface->w;
   *h = rs->surface->h;
 }

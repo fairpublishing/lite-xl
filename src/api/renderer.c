@@ -375,8 +375,7 @@ static int f_draw_text(lua_State *L) {
 
 static int f_present_surface(lua_State *L) {
   RenSurface *rs = check_rensurface(L, 1);
-  lua_Number x = luaL_checknumber(L, 2);
-  lua_Number y = luaL_checknumber(L, 3);
+  int x = rs->rencache.x_origin, y = rs->rencache.y_origin;
   rencache_end_frame(&rs->rencache, rs);
   rencache_update_rects(&rs->rencache, rs);
   rencache_swap_buffers(&rs->rencache);
@@ -472,13 +471,15 @@ static int f_rensurf_create(lua_State *L) {
     return 1;
 }
 
-static int f_rensurf_get_size(lua_State *L) {
+static int f_rensurf_get_rect(lua_State *L) {
     RenSurface *rs = check_rensurface(L, 1);
-    int w, h;
-    rensurf_get_size(rs, &w, &h);
+    int x, y, w, h;
+    rensurf_get_rect(rs, &x, &y, &w, &h);
+    lua_pushnumber(L, x);
+    lua_pushnumber(L, y);
     lua_pushnumber(L, w);
     lua_pushnumber(L, h);
-    return 2;
+    return 4;
 }
 
 static int f_rensurf_free(lua_State *L) {
@@ -487,11 +488,21 @@ static int f_rensurf_free(lua_State *L) {
     return 0;
 }
 
+static int f_rensurf_set_position(lua_State *L) {
+    RenSurface *rs = check_rensurface(L, 1);
+    int x = luaL_checkinteger(L, 2);
+    int y = luaL_checkinteger(L, 3);
+    rs->rencache.x_origin = x;
+    rs->rencache.y_origin = y;
+    return 0;
+}
+
 // Define the methods for the RenSurface type
 static const luaL_Reg libRenSurface[] = {
     {"__gc",         f_rensurf_free      },
     {"create",       f_rensurf_create    },
-    {"get_size",     f_rensurf_get_size  },
+    {"get_rect",     f_rensurf_get_rect  },
+    {"set_position", f_rensurf_set_position},
     {NULL, NULL}
 };
 

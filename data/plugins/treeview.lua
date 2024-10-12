@@ -21,6 +21,7 @@ local tooltip_delay = 0.5
 local tooltip_alpha = 255
 local tooltip_alpha_rate = 1
 
+local surface_base_width = 110 * SCALE
 
 local function get_depth(filename)
   local n = 1
@@ -274,9 +275,11 @@ function TreeView:draw_tooltip()
 
   local bx, by = x - tooltip_border, y - tooltip_border
   local bw, bh = w + 2 * tooltip_border, h + 2 * tooltip_border
-  renderer.draw_rect(bx, by, bw, bh, replace_alpha(style.text, self.tooltip.alpha))
-  renderer.draw_rect(x, y, w, h, replace_alpha(style.background2, self.tooltip.alpha))
-  common.draw_text(style.font, replace_alpha(style.text, self.tooltip.alpha), text, "center", x, y, w, h)
+  local background = replace_alpha(style.background2, self.tooltip.alpha)
+  local surface = self:surface_for("tooltip", bx, by, bw, bh, background)
+  renderer.draw_rect(surface, bx, by, bw, bh, replace_alpha(style.text, self.tooltip.alpha))
+  common.draw_text(surface, style.font, replace_alpha(style.text, self.tooltip.alpha), text, "center", x, y, w, h)
+  self:present_surfaces()
 end
 
 
@@ -304,67 +307,74 @@ function TreeView:get_item_text(item, active, hovered)
 end
 
 
-function TreeView:draw_item_text(item, active, hovered, x, y, w, h)
+function TreeView:draw_item_text(surface, item, active, hovered, x, y, w, h)
   local item_text, item_font, item_color = self:get_item_text(item, active, hovered)
-  common.draw_text(item_font, item_color, item_text, nil, x, y, 0, h)
+  common.draw_text(surface, item_font, item_color, item_text, nil, x, y, 0, h)
 end
 
 
-function TreeView:draw_item_icon(item, active, hovered, x, y, w, h)
+function TreeView:draw_item_icon(surface, item, active, hovered, x, y, w, h)
   local icon_char, icon_font, icon_color = self:get_item_icon(item, active, hovered)
-  common.draw_text(icon_font, icon_color, icon_char, nil, x, y, 0, h)
+  common.draw_text(surface, icon_font, icon_color, icon_char, nil, x, y, 0, h)
   return self.item_icon_width + self.item_text_spacing
 end
 
 
-function TreeView:draw_item_body(item, active, hovered, x, y, w, h)
-    x = x + self:draw_item_icon(item, active, hovered, x, y, w, h)
-    self:draw_item_text(item, active, hovered, x, y, w, h)
+function TreeView:draw_item_body(surface, item, active, hovered, x, y, w, h)
+    x = x + self:draw_item_icon(surface, item, active, hovered, x, y, w, h)
+    self:draw_item_text(surface, item, active, hovered, x, y, w, h)
 end
 
 
-function TreeView:draw_item_chevron(item, active, hovered, x, y, w, h)
+function TreeView:draw_item_chevron(surface, item, active, hovered, x, y, w, h)
   if item.type == "dir" then
     local chevron_icon = item.expanded and "-" or "+"
     local chevron_color = hovered and style.accent or style.text
-    common.draw_text(style.icon_font, chevron_color, chevron_icon, nil, x, y, 0, h)
+    common.draw_text(surface, style.icon_font, chevron_color, chevron_icon, nil, x, y, 0, h)
   end
   return style.padding.x
 end
 
 
-function TreeView:draw_item_background(item, active, hovered, x, y, w, h)
+function TreeView:draw_item_background(surface, item, active, hovered, x, y, w, h)
   if hovered then
     local hover_color = { table.unpack(style.line_highlight) }
     hover_color[4] = 160
-    renderer.draw_rect(x, y, w, h, hover_color)
+    renderer.draw_rect(surface, x, y, w, h, hover_color)
   elseif active then
-    renderer.draw_rect(x, y, w, h, style.line_highlight)
+    renderer.draw_rect(surface, x, y, w, h, style.line_highlight)
   end
 end
 
 
-function TreeView:draw_item(item, active, hovered, x, y, w, h)
-  self:draw_item_background(item, active, hovered, x, y, w, h)
+function TreeView:draw_item(surface, item, active, hovered, x, y, w, h)
+  self:draw_item_background(surface, item, active, hovered, x, y, w, h)
 
   x = x + item.depth * style.padding.x + style.padding.x
-  x = x + self:draw_item_chevron(item, active, hovered, x, y, w, h)
+  x = x + self:draw_item_chevron(surface, item, active, hovered, x, y, w, h)
 
-  self:draw_item_body(item, active, hovered, x, y, w, h)
+  self:draw_item_body(surface, item, active, hovered, x, y, w, h)
+end
+
+
+function TreeView:compute_required_width()
+  return math.ceil(self.size.x / surface_base_width) * surface_base_width
 end
 
 
 function TreeView:draw()
   if not self.visible then return end
-  self:draw_background(style.background2)
-  local _y, _h = self.position.y, self.size.y
+  local _x, _y = self.position.x, self.position.y
+  local _w, _h = self:compute_required_width(), self.size.y
 
   local doc = core.active_view.doc
   local active_filename = doc and system.absolute_path(doc.filename or "")
 
+  local surface = self:surface_for("treeview", _x, _y, _w, _h, style.background2)
+
   for item, x,y,w,h in self:each_item() do
     if y + h >= _y and y < _y + _h then
-      self:draw_item(item,
+      self:draw_item(surface, item,
         item == self.selected_item,
         item == self.hovered_item,
         x, y, w, h)
@@ -375,6 +385,8 @@ function TreeView:draw()
   if self.hovered_item and self.tooltip.x and self.tooltip.alpha > 0 then
     core.root_view:defer_draw(self.draw_tooltip, self)
   end
+
+  self:present_surfaces()
 end
 
 

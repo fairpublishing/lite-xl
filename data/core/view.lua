@@ -17,13 +17,9 @@ function View:new()
   self.scroll = { x = 0, y = 0, to = { x = 0, y = 0 } }
   self.cursor = "arrow"
   self.scrollable = false
-  self.v_scrollbar = Scrollbar({direction = "v"})
-  self.h_scrollbar = Scrollbar({direction = "h"})
+  self.v_scrollbar = Scrollbar(self, {direction = "v", alignment = "e"})
+  self.h_scrollbar = Scrollbar(self, {direction = "h", alignment = "e"})
   self.current_scale = SCALE
-
-  -- reference systems variables
-  self.ref_system = { stack = { }, x = 0, y = 0 }
-  self.named_ref_system = { }
 
   -- drawing surfaces variables
   self.named_surfaces = { }
@@ -31,58 +27,49 @@ function View:new()
 end
 
 
-function View:push_reference_system(dx, dy, name)
-  table.insert(self.ref_system.stack, {dx, dy})
-  self.ref_system.x, self.ref_system.y = self.ref_system.x + dx, self.ref_system.y + dy
-  if name then
-    self.named_ref_system[name] = { x = self.ref_system.x, y = self.ref_system.y }
+-- Ensure the surface is set to be actually "presented" and draw the
+-- background when first used.
+-- The role of the surface_id is to ensure the same surface is not drawn
+-- multiple times.
+function View:set_surface_to_draw(surface, surface_id)
+  if not self.surface_to_draw[surface_id] then
+    self.surface_to_draw[surface_id] = surface
   end
 end
 
 
-function View:pop_reference_system()
-  dx, dy = table.unpack(table.remove(self.ref_system.stack))
-  self.ref_system.x, self.ref_system.y = self.ref_system.x - dx, self.ref_system.y - dy
-end
-
-
-function View:get_screen_coordinates(x, y, name)
-  local ref_system = name and self.named_ref_system[name] or self.ref_system
-  return ref_system.x + x, ref_system.y + y
-end
-
-
--- Ensure the surface is set to be actually "presented" and draw the
--- background when first used.
-function View:set_surface_to_draw(surface, surface_id, x, y, w, h, background)
-  if not self.surface_to_draw[surface_id] then
+function View:surface_from_list(surface_list, id, x, y, w, h, background)
+  local surface = surface_list[id]
+  local surf_x, surf_y, surf_w, surf_h
+  if surface then
+    surf_x, surf_y, surf_w, surf_h = surface.get_rect()
+  end
+  if not surface or surf_w ~= w or surf_h ~= h then
+    -- if we have no surface or the size does not match create a new one under the same id
+    surface = renderer.surface.create(x, y, w, h)
     -- If the surface_id was not in surface_to_draw that means it is the first time
     -- this surface is used in the draw() round: we take this opportunity to draw
     -- it background so that it is done only once for the draw() round.
-    renderer.draw_rect(surface, 0, 0, w, h, background or style.background)
-    local x_screen, y_screen = self:get_screen_coordinates(x, y)
-    self.surface_to_draw[surface_id] = { surface = surface, x = x_screen, y = y_screen }
+    renderer.draw_rect(surface, x, y, w, h, background or style.background)
+    surface_list[id] = surface
+  elseif surf_x ~= x or surf_y ~= y then
+    -- here we may call set_position() unconditionally
+    surface.set_position(x, y)
   end
+  return surface
 end
 
 
-function View:surface_for(name, w, h)
-  local surface = self.named_surfaces[name]
-  local surf_w, surf_h
-  if surface then
-    surf_w, surf_h = surface.get_size()
-  end
-  if not surface or surf_w ~= w or surf_h ~= h then
-    surface = renderer.surface.create(0, 0, w, h)
-    self.named_surfaces[name] = surface
-  end
+function View:surface_for(name, x, y, w, h, background)
+  local surface = surface_from_list(self.named_surfaces, name, x, y, w, h, background)
+  self:set_surface_to_draw(surface, name)
   return surface
 end
 
 
 function View:present_surfaces()
   for id, surface in pairs(self.surface_to_draw) do
-    renderer.present_surface(surface.surface, surface.x, surface.y)
+    renderer.present_surface(surface)
   end
   self.surface_to_draw = { }
 end
@@ -276,13 +263,6 @@ function View:get_content_offset()
 end
 
 
-function View:get_content_rel_offset()
-  local x = common.round(-self.scroll.x)
-  local y = common.round(-self.scroll.y)
-  return x, y
-end
-
-
 function View:clamp_scroll_position()
   local max = self:get_scrollable_size() - self.size.y
   self.scroll.to.y = common.clamp(self.scroll.to.y, 0, max)
@@ -317,14 +297,6 @@ function View:update()
   if not self.scrollable then return end
   self:update_scrollbar()
 end
-
-
----@param color renderer.color
--- function View:draw_background(color)
---   local x, y = self.position.x, self.position.y
---   local w, h = self.size.x, self.size.y
---   renderer.draw_rect(x, y, w, h, color)
--- end
 
 
 function View:draw_scrollbar()
