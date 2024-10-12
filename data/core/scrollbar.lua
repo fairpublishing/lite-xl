@@ -124,7 +124,7 @@ function Scrollbar:_get_thumb_rect_normal()
   return
     nr.across + nr.across_size - across_size,
     nr.along + self.percent * nr.scrollable * (nr.along_size - along_size) / (sz - nr.along_size),
-    across_size,
+    expanded_scrollbar_size,
     along_size
 end
 
