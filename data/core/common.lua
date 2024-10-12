@@ -333,7 +333,7 @@ end
 ---Draws text onto the window.
 ---The function returns the X and Y coordinates of the bottom-right
 ---corner of the text.
-function common.draw_text(surface, font, color, text, align, x,y,w,h)
+function common.draw_text(font, color, text, align, x,y,w,h)
   local tw, th = font:get_width(text), font:get_height()
   if align == "center" then
     x = x + (w - tw) / 2
@@ -341,7 +341,7 @@ function common.draw_text(surface, font, color, text, align, x,y,w,h)
     x = x + (w - tw)
   end
   y = common.round(y + (h - th) / 2)
-  return renderer.draw_text(surface, font, text, x, y, color), y + th
+  return renderer.draw_text(font, text, x, y, color), y + th
 end
 
 

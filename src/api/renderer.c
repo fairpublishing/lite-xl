@@ -7,6 +7,17 @@
 
 // a reference index to a table that stores the fonts
 static int RENDERER_FONT_REF = LUA_NOREF;
+// a reference to the current RenSurface
+static int CURRENT_SURFACE_REF = LUA_NOREF;
+
+RenSurface *current_surface = NULL;
+
+static RenSurface* get_current_surface(lua_State *L) {
+  if (!current_surface) {
+    luaL_error(L, "No current surface set. Call renderer.set_current_surface first.");
+  }
+  return current_surface;
+}
 
 static int font_get_options(
   lua_State *L,
@@ -323,11 +334,11 @@ static RenRect rect_to_grid(lua_Number x, lua_Number y, lua_Number w, lua_Number
 
 
 static int f_set_clip_rect(lua_State *L) {
-  RenSurface *rs = check_rensurface(L, 1);
-  lua_Number x = luaL_checknumber(L, 2);
-  lua_Number y = luaL_checknumber(L, 3);
-  lua_Number w = luaL_checknumber(L, 4);
-  lua_Number h = luaL_checknumber(L, 5);
+  RenSurface *rs = get_current_surface(L);
+  lua_Number x = luaL_checknumber(L, 1);
+  lua_Number y = luaL_checknumber(L, 2);
+  lua_Number w = luaL_checknumber(L, 3);
+  lua_Number h = luaL_checknumber(L, 4);
   RenRect rect = rect_to_grid(x, y, w, h);
   rencache_set_clip_rect(&rs->rencache, rect);
   return 0;
@@ -335,11 +346,11 @@ static int f_set_clip_rect(lua_State *L) {
 
 
 static int f_draw_rect(lua_State *L) {
-  RenSurface *rs = check_rensurface(L, 1);
-  lua_Number x = luaL_checknumber(L, 2);
-  lua_Number y = luaL_checknumber(L, 3);
-  lua_Number w = luaL_checknumber(L, 4);
-  lua_Number h = luaL_checknumber(L, 5);
+  RenSurface *rs = get_current_surface(L);
+  lua_Number x = luaL_checknumber(L, 1);
+  lua_Number y = luaL_checknumber(L, 2);
+  lua_Number w = luaL_checknumber(L, 3);
+  lua_Number h = luaL_checknumber(L, 4);
   RenRect rect = rect_to_grid(x, y, w, h);
   RenColor color = checkcolor(L, 5, 255);
   rencache_draw_rect(&rs->rencache, rect, color);
@@ -347,9 +358,9 @@ static int f_draw_rect(lua_State *L) {
 }
 
 static int f_draw_text(lua_State *L) {
-  RenSurface *rs = check_rensurface(L, 1);
+  RenSurface *rs = get_current_surface(L);
   RenFont* fonts[FONT_FALLBACK_MAX];
-  font_retrieve(L, fonts, 2);
+  font_retrieve(L, fonts, 1);
 
   // stores a reference to this font to the reference table
   lua_rawgeti(L, LUA_REGISTRYINDEX, RENDERER_FONT_REF);
@@ -364,10 +375,10 @@ static int f_draw_text(lua_State *L) {
   lua_pop(L, 1);
 
   size_t len;
-  const char *text = luaL_checklstring(L, 3, &len);
-  double x = luaL_checknumber(L, 4);
-  int y = luaL_checknumber(L, 5);
-  RenColor color = checkcolor(L, 6, 255);
+  const char *text = luaL_checklstring(L, 2, &len);
+  double x = luaL_checknumber(L, 3);
+  int y = luaL_checknumber(L, 4);
+  RenColor color = checkcolor(L, 5, 255);
   x = rencache_draw_text(&rs->rencache, fonts, text, len, x, y, color);
   lua_pushnumber(L, x);
   return 1;
@@ -386,6 +397,13 @@ static int f_present_surface(lua_State *L) {
 
 static int f_present_window(lua_State *L) {
   renwin_present(&window_renderer);
+  return 0;
+}
+
+static int f_set_current_surface(lua_State *L) {
+  check_rensurface(L, 1);
+  luaL_unref(L, LUA_REGISTRYINDEX, CURRENT_SURFACE_REF);
+  CURRENT_SURFACE_REF = luaL_ref(L, LUA_REGISTRYINDEX);
   return 0;
 }
 
@@ -431,6 +449,7 @@ static const luaL_Reg lib[] = {
   { "present_surface" ,   f_present_surface    },
   { "present_window",     f_present_window     },
   { "render_fill_rect",   f_render_fill_rect   },
+  { "set_current_surface", f_set_current_surface },
   { NULL,                 NULL                 }
 };
 

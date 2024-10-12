@@ -58,8 +58,8 @@ function DocView:draw_line_content_text(font, text, x, y, color)
   while x_tile < x_rlimit and (not x_text_end or x_tile < x_text_end) do
     if x_tile + tile_w > self.position.x then
       -- the tile is visible on the screen: get its surface and draw on it
-      local surface = self:surface_for_content(tile_i, tile_j)
-      x_text_end = renderer.draw_text(surface, font, text, x, y, color)
+      self:surface_for_content(tile_i, tile_j)
+      x_text_end = renderer.draw_text(font, text, x, y, color)
     end
     x_tile = x_tile + tile_w
     tile_i = tile_i + 1
@@ -80,8 +80,8 @@ function DocView:draw_line_content_rect(x, y, w, h, color)
   while x_tile < self.position.x + self.size.x and x_tile < x + w do
     if x_tile + tile_w > self.position.x then
       -- the tile is visible on the screen: get its surface and draw on it
-      local surface = self:surface_for_content(tile_i, tile_j)
-      renderer.draw_rect(surface, x, y, w, h, color)
+      self:surface_for_content(tile_i, tile_j)
+      renderer.draw_rect(x, y, w, h, color)
     end
     x_tile = x_tile + tile_w
     tile_i = tile_i + 1
@@ -107,7 +107,6 @@ function DocView:surface_for_content(tile_i, tile_j)
   -- FIXME: it can be expensive to generate this id string every time
   local tile_id = string.format("c %d %d", tile_i, tile_j)
   self:set_surface_to_draw(surface, tile_id)
-  return surface
 end
 
 
@@ -118,7 +117,6 @@ function DocView:surface_for_gutter(tile_j)
   local surface = self:surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
   local tile_id = string.format("g %d", tile_j)
   self:set_surface_to_draw(surface, tile_id)
-  return surface
 end
 
 
@@ -582,7 +580,7 @@ end
 
 function DocView:draw_caret(x, y)
     local w, h = style.caret_width, self.tiles_metric.line_height
-    self:surface_for("cursor", x, y, w, h)
+    self:set_surface_for("cursor", x, y, w, h)
 end
 
 function DocView:draw_line_body(line, x, y)
@@ -638,8 +636,8 @@ function DocView:draw_line_gutter(line, x, y, width)
   x = x + style.padding.x
   local lh = self.tiles_metric.line_height
   local _, tile_j = self:get_tile_indexes(x, y)
-  local surface = self:surface_for_gutter(tile_j)
-  common.draw_text(surface, self:get_font(), color, line, "right", x, y, width, lh)
+  self:surface_for_gutter(tile_j)
+  common.draw_text(self:get_font(), color, line, "right", x, y, width, lh)
   return lh
 end
 

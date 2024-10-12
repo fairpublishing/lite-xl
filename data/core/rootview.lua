@@ -439,8 +439,8 @@ function RootView:draw_grabbed_tab()
   local x = self.mouse.x - w / 2
   local y = self.mouse.y - h / 2
   local view = dn.node.views[dn.idx]
-  local surface = self:surface_for("dragged_tab", x, y, w, h)
-  self.root_node:draw_tab(surface, view, true, true, false, x, y, w, h, true)
+  self:set_surface_for("dragged_tab", x, y, w, h)
+  self.root_node:draw_tab(view, true, true, false, x, y, w, h, true)
 end
 
 

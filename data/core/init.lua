@@ -1101,14 +1101,14 @@ function core.add_thread(f, weak_ref, ...)
 end
 
 
-function core.push_clip_rect(surface, x, y, w, h)
+function core.push_clip_rect(x, y, w, h)
   local x2, y2, w2, h2 = table.unpack(core.clip_rect_stack[#core.clip_rect_stack])
   local r, b, r2, b2 = x+w, y+h, x2+w2, y2+h2
   x, y = math.max(x, x2), math.max(y, y2)
   b, r = math.min(b, b2), math.min(r, r2)
   w, h = r-x, b-y
   table.insert(core.clip_rect_stack, { x, y, w, h })
-  renderer.set_clip_rect(surface, x, y, w, h)
+  renderer.set_clip_rect(x, y, w, h)
 end
 
 
@@ -1341,7 +1341,6 @@ function core.step()
     core.window_title = current_title
   end
 
-  -- core.root_view.root_node:assign_ids()
   -- draw
   renderer.begin_frame()
   core.clip_rect_stack[1] = { 0, 0, width, height }

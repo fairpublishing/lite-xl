@@ -328,19 +328,19 @@ function Scrollbar:draw_track()
 end
 
 ---Draw the scrollbar thumb
-function Scrollbar:draw_thumb(surface)
+function Scrollbar:draw_thumb()
   local highlight = self.hovering.thumb or self.dragging
   local color = highlight and style.scrollbar2 or style.scrollbar
   local x, y, w, h = self:get_thumb_rect()
-  renderer.draw_rect(surface, x, y, w, h, color)
+  renderer.draw_rect(x, y, w, h, color)
 end
 
 ---Draw both the scrollbar track and thumb
 function Scrollbar:draw()
   local x, y, w, h = self:get_track_rect()
-  local surface = self.view:surface_for(self.generic_name, x, y, w, h)
-  self:draw_track(surface)
-  self:draw_thumb(surface)
+  self.view:surface_for(self.generic_name, x, y, w, h)
+  self:draw_track()
+  self:draw_thumb()
 end
 
 

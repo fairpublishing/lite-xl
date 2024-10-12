@@ -47,23 +47,27 @@ function View:surface_from_list(surface_list, id, x, y, w, h, background)
   if not surface or surf_w ~= w or surf_h ~= h then
     -- if we have no surface or the size does not match create a new one under the same id
     surface = renderer.surface.create(x, y, w, h)
+    renderer.set_current_surface(surface)
     -- If the surface_id was not in surface_to_draw that means it is the first time
     -- this surface is used in the draw() round: we take this opportunity to draw
     -- it background so that it is done only once for the draw() round.
-    renderer.draw_rect(surface, x, y, w, h, background or style.background)
+    renderer.draw_rect(x, y, w, h, background or style.background)
     surface_list[id] = surface
+    -- we returns now to avoid calling again set_current_surface after
+    -- this if clause
+    return surface
   elseif surf_x ~= x or surf_y ~= y then
     -- here we may call set_position() unconditionally
     surface.set_position(x, y)
   end
+  renderer.set_current_surface(surface)
   return surface
 end
 
 
-function View:surface_for(name, x, y, w, h, background)
+function View:set_surface_for(name, x, y, w, h, background)
   local surface = surface_from_list(self.named_surfaces, name, x, y, w, h, background)
   self:set_surface_to_draw(surface, name)
-  return surface
 end
 
 
