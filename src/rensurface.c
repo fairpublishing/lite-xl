@@ -1,6 +1,8 @@
 #include "rensurface.h"
 
 void rensurf_init(RenSurface *rs, int x_origin, int y_origin) {
+  rs->surface = NULL;
+  rs->texture = NULL;
   rencache_init(&rs->rencache, x_origin, y_origin);
 }
 

@@ -342,10 +342,10 @@ function CommandView:draw_line_gutter(idx, x, y)
   local yoffset = self:get_line_text_y_offset()
   local pos = self.position
   local color = common.lerp(style.text, style.accent, self.gutter_text_brightness / 100)
-  core.push_clip_rect(pos.x, pos.y, self:get_gutter_width(), self.size.y)
+  core.push_viewport_rect(pos.x, pos.y, self:get_gutter_width(), self.size.y)
   x = x + style.padding.x
   renderer.draw_text(self:get_font(), self.label, x, y + yoffset, color)
-  core.pop_clip_rect()
+  core.pop_viewport_rect()
   return self:get_line_height()
 end
 
@@ -357,7 +357,7 @@ local function draw_suggestions_box(self)
   local h = math.ceil(self.suggestions_height)
   local rx, ry, rw, rh = self.position.x, self.position.y - h - dh, self.size.x, h
 
-  core.push_clip_rect(rx, ry, rw, rh)
+  core.push_viewport_rect(rx, ry, rw, rh)
   -- draw suggestions background
   if #self.suggestions > 0 then
     renderer.draw_rect(rx, ry, rw, rh, style.background3)
@@ -380,7 +380,7 @@ local function draw_suggestions_box(self)
       common.draw_text(self:get_font(), style.dim, item.info, "right", x, y, w, lh)
     end
   end
-  core.pop_clip_rect()
+  core.pop_viewport_rect()
 end
 
 

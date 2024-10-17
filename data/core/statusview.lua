@@ -1100,7 +1100,7 @@ end
 function StatusView:draw()
   if not self.visible and self.size.y <= 0 then return end
 
-  self:draw_background(style.background2)
+  self:set_surface_for("statusbar", self.position.x, self.position.y, self.size.x, self.size.y, style.background2)
 
   if self.message and system.get_time() <= self.message_timeout then
     self:draw_items(self.message, false, 0, self.size.y)
@@ -1110,7 +1110,7 @@ function StatusView:draw()
     end
     if #self.active_items > 0 then
       --- draw left pane
-      core.push_clip_rect(
+      core.push_viewport_rect(
         0, self.position.y,
         self.left_width + style.padding.x, self.size.y
       )
@@ -1125,18 +1125,18 @@ function StatusView:draw()
             )
           end
           if item.on_draw then
-            core.push_clip_rect(item_x, self.position.y, item.w, self.size.y)
+            core.push_viewport_rect(item_x, self.position.y, item.w, self.size.y)
             item.on_draw(item_x, self.position.y, self.size.y, hovered)
-            core.pop_clip_rect()
+            core.pop_viewport_rect()
           else
             self:draw_items(item.cached_item, false, item_x - style.padding.x)
           end
         end
       end
-      core.pop_clip_rect()
+      core.pop_viewport_rect()
 
       --- draw right pane
-      core.push_clip_rect(
+      core.push_viewport_rect(
         self.size.x - (self.right_width + style.padding.x), self.position.y,
         self.right_width + style.padding.x, self.size.y
       )
@@ -1151,15 +1151,15 @@ function StatusView:draw()
             )
           end
           if item.on_draw then
-            core.push_clip_rect(item_x, self.position.y, item.w, self.size.y)
+            core.push_viewport_rect(item_x, self.position.y, item.w, self.size.y)
             item.on_draw(item_x, self.position.y, self.size.y, hovered)
-            core.pop_clip_rect()
+            core.pop_viewport_rect()
           else
             self:draw_items(item.cached_item, false, item_x - style.padding.x)
           end
         end
       end
-      core.pop_clip_rect()
+      core.pop_viewport_rect()
 
       -- draw tooltip
       if self.hovered_item.tooltip ~= "" and self.hovered_item.active then
@@ -1167,6 +1167,7 @@ function StatusView:draw()
       end
     end
   end
+  self:present_surfaces()
 end
 
 return StatusView

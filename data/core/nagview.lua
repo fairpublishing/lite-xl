@@ -194,7 +194,7 @@ local function draw_nagview_message(self)
 
   ox = ox + style.padding.x
 
-  core.push_clip_rect(ox, oy, self.size.x, self.show_height)
+  core.push_viewport_rect(ox, oy, self.size.x, self.show_height)
 
   -- if there are other items, show it
   if #self.queue > 0 then
@@ -235,7 +235,7 @@ local function draw_nagview_message(self)
 
   self:draw_scrollbar()
 
-  core.pop_clip_rect()
+  core.pop_viewport_rect()
 end
 
 function NagView:draw()

@@ -1,6 +1,7 @@
 local core = require "core"
 local config = require "core.config"
 local common = require "core.common"
+local style = require "core.style"
 local Object = require "core.object"
 local Scrollbar = require "core.scrollbar"
 
@@ -31,34 +32,29 @@ end
 -- background when first used.
 -- The role of the surface_id is to ensure the same surface is not drawn
 -- multiple times.
-function View:set_surface_to_draw(surface, surface_id)
+function View:set_surface_to_draw(surface, surface_id, background)
   if not self.surface_to_draw[surface_id] then
+    renderer.begin_frame(surface)
+    local x, y, w, h = surface:get_rect()
+    renderer.draw_rect(x, y, w, h, background)
     self.surface_to_draw[surface_id] = surface
   end
 end
 
 
-function View:surface_from_list(surface_list, id, x, y, w, h, background)
+local function surface_from_list(surface_list, id, x, y, w, h)
   local surface = surface_list[id]
   local surf_x, surf_y, surf_w, surf_h
   if surface then
-    surf_x, surf_y, surf_w, surf_h = surface.get_rect()
+    surf_x, surf_y, surf_w, surf_h = surface:get_rect()
   end
   if not surface or surf_w ~= w or surf_h ~= h then
     -- if we have no surface or the size does not match create a new one under the same id
     surface = renderer.surface.create(x, y, w, h)
-    renderer.set_current_surface(surface)
-    -- If the surface_id was not in surface_to_draw that means it is the first time
-    -- this surface is used in the draw() round: we take this opportunity to draw
-    -- it background so that it is done only once for the draw() round.
-    renderer.draw_rect(x, y, w, h, background or style.background)
     surface_list[id] = surface
-    -- we returns now to avoid calling again set_current_surface after
-    -- this if clause
-    return surface
   elseif surf_x ~= x or surf_y ~= y then
     -- here we may call set_position() unconditionally
-    surface.set_position(x, y)
+    surface:set_position(x, y)
   end
   renderer.set_current_surface(surface)
   return surface
@@ -67,7 +63,7 @@ end
 
 function View:set_surface_for(name, x, y, w, h, background)
   local surface = surface_from_list(self.named_surfaces, name, x, y, w, h, background)
-  self:set_surface_to_draw(surface, name)
+  self:set_surface_to_draw(surface, name, background or style.background)
 end
 
 

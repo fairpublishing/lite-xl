@@ -28,7 +28,7 @@ end
 
 function DocView:get_content_body_offset()
   local x, y = self:get_content_offset()
-  return x + self.tiles_metric.gutter_width
+  return x + self.tiles_metric.gutter_width, y
 end
 
 function DocView:get_tile_indexes(x, y)
@@ -106,7 +106,7 @@ function DocView:surface_for_content(tile_i, tile_j)
   local surface = self:surface_from_list(column_surfaces, tile_j, x, y, w, h)
   -- FIXME: it can be expensive to generate this id string every time
   local tile_id = string.format("c %d %d", tile_i, tile_j)
-  self:set_surface_to_draw(surface, tile_id)
+  self:set_surface_to_draw(surface, tile_id, background or style.background)
 end
 
 
@@ -116,7 +116,7 @@ function DocView:surface_for_gutter(tile_j)
   local x, y = x_o, y_o + (tile_j - 1) * h
   local surface = self:surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
   local tile_id = string.format("g %d", tile_j)
-  self:set_surface_to_draw(surface, tile_id)
+  self:set_surface_to_draw(surface, tile_id, background or style.background)
 end
 
 
@@ -714,13 +714,12 @@ function DocView:draw()
   x, y = self:get_line_screen_position(minline)
   -- the clip below ensure we don't write on the gutter region. On the
   -- right side it is redundant with the Node's clip.
-  -- We no longer needs to clip there to protect the gutter
-  -- core.push_clip_rect(pos.x + gw, pos.y, self.size.x - gw, self.size.y)
+  core.push_viewport_rect(pos.x + gw, pos.y, self.size.x - gw, self.size.y)
   for i = minline, maxline do
     y = y + (self:draw_line_body(i, x, y) or lh)
   end
   self:draw_overlay()
-  -- core.pop_clip_rect()
+  core.pop_viewport_rect()
 
   self:draw_scrollbar()
   self:present_surfaces()

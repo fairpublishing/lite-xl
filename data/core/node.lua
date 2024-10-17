@@ -556,9 +556,9 @@ function Node:draw_tab(view, is_active, is_hovered, is_close_hovered, x, y, w, h
   -- We really want to keep the following clip operation even with the new
   -- graphical architecture one-surface-for-each-view to cut the text that may
   -- overflow.
-  core.push_clip_rect(x, y, w, h)
+  renderer.set_clip_rect(x, y, w, h)
   self:draw_tab_title(view, style.font, is_active, is_hovered, x, y, w, h)
-  core.pop_clip_rect()
+  -- Clipping rectangle will be cleared when all the calls to draw_tab() are done
 end
 
 function Node:draw_tabs(view)
@@ -566,8 +566,8 @@ function Node:draw_tabs(view)
   local x = self.position.x
   local ds = style.divider_size
 
+  core.push_viewport_rect(x, y, self.size.x, h)
   self:get_id() -- we need an id to draw tabs because we want a named surface
-  renderer.set_viewport(x, y, self.size.x, h)
   local surface_id = "tab " .. tostring(self.id)
   view:set_surface_for(surface_id, x, y, self.size.x, h, style.background2)
 
@@ -581,6 +581,9 @@ function Node:draw_tabs(view)
                   i == self.hovered_tab, i == self.hovered_close,
                   x, y, w, h)
   end
+  -- We clear the clip rectangle to undo the clipping done by draw_tab() calls
+  -- before.
+  renderer.clear_clip_rect()
 
   if #self.views > tabs_number then
     local _, pad = get_scroll_button_width()
@@ -595,6 +598,7 @@ function Node:draw_tabs(view)
   end
 
   view:present_surfaces()
+  core.pop_viewport_rect()
 end
 
 
@@ -604,11 +608,9 @@ function Node:draw()
       self:draw_tabs(core.root_view)
     end
     local pos, size = self.active_view.position, self.active_view.size
-    renderer.set_viewport(pos.x, pos.y, size.x, size.y)
+    core.push_viewport_rect(pos.x, pos.y, size.x, size.y)
     self.active_view:draw()
-    -- In theory we should reset the viewport but probably it is fine to leave it set.
-    -- Needs more investigations,
-    -- renderer.set_viewport()
+    core.pop_viewport_rect()
   else
     local x, y, w, h = self:get_divider_rect()
     -- directly draw the rectangle using the SDL renderer, without using

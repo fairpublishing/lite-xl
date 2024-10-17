@@ -60,13 +60,15 @@ typedef struct {
 } DrawRectCommand;
 
 void rencache_init(RenCache *cache, int x, int y) {
-  cache->command_buf_size = 0;
-  cache->command_buf = NULL;
   cache->cells_prev = cache->cells_buf1;
   cache->cells = cache->cells_buf2;
+  cache->command_buf_size = 0;
+  cache->command_buf = NULL;
   cache->resize_issue = false;
+  cache->command_buf_idx = 0;
   cache->surface_rect = (RenRect){0};
   cache->last_clip_rect = (RenRect){0};
+  cache->rect_count = 0;
   cache->x_origin = x;
   cache->y_origin = y;
   cache->show_debug = false;

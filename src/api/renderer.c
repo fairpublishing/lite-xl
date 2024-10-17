@@ -307,17 +307,6 @@ static int f_begin_frame(lua_State *L) {
 }
 
 
-// FIXME: should no longer be called because it is integrated in
-// f_present_surface
-static int f_end_frame(lua_State *L) {
-  RenSurface *rs = check_rensurface(L, 1);
-  RenCache *rencache = &rs->rencache;
-  rencache_end_frame(rencache, rs);
-  rencache_update_rects(rencache, rs);
-  rencache_swap_buffers(rencache);
-  return 0;
-}
-
 static int f_clear_font_refs(lua_State *L) {
   // clear the font reference table
   lua_newtable(L);
@@ -344,6 +333,14 @@ static int f_set_clip_rect(lua_State *L) {
   return 0;
 }
 
+static int f_clear_clip_rect(lua_State *L) {
+  RenSurface *rs = get_current_surface(L);
+  int x, y, w, h;
+  rensurf_get_rect(rs, &x, &y, &w, &h);
+  RenRect rect = {x, y, w, h};
+  rencache_set_clip_rect(&rs->rencache, rect);
+  return 0;
+}
 
 static int f_draw_rect(lua_State *L) {
   RenSurface *rs = get_current_surface(L);
@@ -401,9 +398,10 @@ static int f_present_window(lua_State *L) {
 }
 
 static int f_set_current_surface(lua_State *L) {
-  check_rensurface(L, 1);
+  RenSurface *rs = check_rensurface(L, 1);
   luaL_unref(L, LUA_REGISTRYINDEX, CURRENT_SURFACE_REF);
   CURRENT_SURFACE_REF = luaL_ref(L, LUA_REGISTRYINDEX);
+  current_surface = rs;
   return 0;
 }
 
@@ -440,9 +438,9 @@ static const luaL_Reg lib[] = {
   { "show_debug",         f_show_debug         },
   { "get_size",           f_get_size           },
   { "begin_frame",        f_begin_frame        },
-  { "end_frame",          f_end_frame          },
   { "clear_font_refs",    f_clear_font_refs    },
   { "set_clip_rect",      f_set_clip_rect      },
+  { "clear_clip_rect",    f_clear_clip_rect    },
   { "draw_rect",          f_draw_rect          },
   { "draw_text",          f_draw_text          },
   { "set_viewport",       f_set_viewport       },
@@ -468,10 +466,13 @@ static const luaL_Reg fontLib[] = {
 };
 
 static int f_rensurf_create(lua_State *L) {
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
-    int w = luaL_checkinteger(L, 3);
-    int h = luaL_checkinteger(L, 4);
+    const lua_Number xf = luaL_checknumber(L, 1);
+    const lua_Number yf = luaL_checknumber(L, 2);
+    const lua_Number wf = luaL_checknumber(L, 3);
+    const lua_Number hf = luaL_checknumber(L, 4);
+
+    const int x = (int) xf, y = (int) yf;
+    const int w = round(wf), h = round(hf);
 
     SDL_Renderer *renderer = window_renderer.renderer;
     int scale = window_renderer.scale;
@@ -509,10 +510,10 @@ static int f_rensurf_free(lua_State *L) {
 
 static int f_rensurf_set_position(lua_State *L) {
     RenSurface *rs = check_rensurface(L, 1);
-    int x = luaL_checkinteger(L, 2);
-    int y = luaL_checkinteger(L, 3);
-    rs->rencache.x_origin = x;
-    rs->rencache.y_origin = y;
+    const lua_Number x = luaL_checknumber(L, 2);
+    const lua_Number y = luaL_checknumber(L, 3);
+    rs->rencache.x_origin = (int) x;
+    rs->rencache.y_origin = (int) y;
     return 0;
 }
 
