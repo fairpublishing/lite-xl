@@ -27,10 +27,8 @@ void renwin_resize_window(RenWindow *ren) {
 void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
   /* Width and height of the surface, in pixels. */
   const int w = rs->surface->w, h = rs->surface->h;
-  const int dx = (x < 0 ? -x : 0);
-  const int dy = (y < 0 ? -y : 0);
-  const SDL_Rect src = { dx    , dy    , w - dx, h - dy };
-  const SDL_Rect dst = { x + dx, y + dy, w - dx, h - dy };
+  const SDL_Rect src = { 0, 0, w, h };
+  const SDL_Rect dst = { x, y, w, h };
   SDL_RenderCopy(ren->renderer, rs->texture, &src, &dst);
 }
 

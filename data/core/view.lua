@@ -42,7 +42,7 @@ function View:set_surface_to_draw(surface, surface_id, background)
 end
 
 
-local function surface_from_list(surface_list, id, x, y, w, h)
+function View.surface_from_list(surface_list, id, x, y, w, h)
   local surface = surface_list[id]
   local surf_x, surf_y, surf_w, surf_h
   if surface then
@@ -62,7 +62,7 @@ end
 
 
 function View:set_surface_for(name, x, y, w, h, background)
-  local surface = surface_from_list(self.named_surfaces, name, x, y, w, h, background)
+  local surface = View.surface_from_list(self.named_surfaces, name, x, y, w, h, background)
   self:set_surface_to_draw(surface, name, background or style.background)
 end
 

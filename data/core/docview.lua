@@ -28,7 +28,7 @@ end
 
 function DocView:get_content_body_offset()
   local x, y = self:get_content_offset()
-  return x + self.tiles_metric.gutter_width, y
+  return x + self:get_gutter_width(), y
 end
 
 function DocView:get_tile_indexes(x, y)
@@ -65,7 +65,7 @@ function DocView:draw_line_content_text(font, text, x, y, color)
     tile_i = tile_i + 1
   end
 
-  return x_tile >= x_rlimit
+  return x_text_end, x_tile >= x_rlimit
 end
 
 
@@ -106,17 +106,18 @@ function DocView:surface_for_content(tile_i, tile_j)
   local surface = self:surface_from_list(column_surfaces, tile_j, x, y, w, h)
   -- FIXME: it can be expensive to generate this id string every time
   local tile_id = string.format("c %d %d", tile_i, tile_j)
-  self:set_surface_to_draw(surface, tile_id, background or style.background)
+  self:set_surface_to_draw(surface, tile_id, style.background)
 end
 
 
 function DocView:surface_for_gutter(tile_j)
-  local x_o, y_o = self:get_content_offset()
+  local _, y_o = self:get_content_offset()
+  local x_o = common.round(self.position.x)
   local w, h = self.tiles_metric.gutter_width, self.tiles_metric.line_height * TILE_LINES
   local x, y = x_o, y_o + (tile_j - 1) * h
-  local surface = self:surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
+  local surface = self.surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
   local tile_id = string.format("g %d", tile_j)
-  self:set_surface_to_draw(surface, tile_id, background or style.background)
+  self:set_surface_to_draw(surface, tile_id, style.background)
 end
 
 
@@ -180,7 +181,7 @@ function DocView:new(doc)
   self.ime_selection = { from = 0, size = 0 }
   self.ime_status = false
   self.hovering_gutter = false
-  self.tiles_metric = { line_height = 0, char_width = 0 }
+  self.tiles_metric = { line_height = 0, char_width = 0, gutter_width = 0 }
   self.content_surfaces = { }
   self.gutter_surfaces = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
@@ -378,9 +379,9 @@ function DocView:scroll_to_make_visible(line, col)
   local lh = self:get_line_height()
   local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
   self.scroll.to.y = common.clamp(self.scroll.to.y, ly - oy - self.size.y + scroll_h + lh * 2, ly - oy - lh)
-  local gw = self.tiles_metric.gutter_width
+  local gw = self:get_gutter_width()
   local xoffset = self:get_col_x_offset(line, col)
-  local xmargin = 3 * self.tiles_metric.char_width
+  local xmargin = 3 * self:get_font():get_width(' ')
   local xsup = xoffset + gw + xmargin
   local xinf = xoffset - xmargin
   local _, _, scroll_w = self.v_scrollbar:get_track_rect()
@@ -567,12 +568,13 @@ function DocView:draw_line_text(line, x, y)
     last_token = tokens_count - 1
   end
 
+  local is_off_screen_right
   for tidx, type, text in self.doc.highlighter:each_token(line) do
     local color = style.syntax[type]
     local font = style.syntax_fonts[type] or default_font
     -- do not render newline, fixes issue #1164
     if tidx == last_token then text = text:sub(1, -2) end
-    local is_off_screen_right = self:draw_line_content_text(font, text, tx, ty, color)
+    tx, is_off_screen_right = self:draw_line_content_text(font, text, tx, ty, color)
     if is_off_screen_right then break end
   end
   return self:get_line_height()

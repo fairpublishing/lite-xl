@@ -277,7 +277,9 @@ static void push_rect(RenCache* cache, RenRect r, int *count) {
 void rencache_end_frame(RenCache* cache, RenSurface *rs) {
   /* update cells from commands */
   Command *cmd = NULL;
-  RenRect cr = cache->surface_rect;
+  RenRect surf_rect_rel = cache->surface_rect;
+  rect_set_from_origin(cache, &surf_rect_rel);
+  RenRect cr = surf_rect_rel;
   while (next_command(cache, &cmd)) {
     /* cmd->command[0] should always be the Command rect */
     if (cmd->type == SET_CLIP) { cr = cmd->command[0]; }
@@ -290,8 +292,8 @@ void rencache_end_frame(RenCache* cache, RenSurface *rs) {
 
   /* push rects for all cells changed from last frame, reset cells */
   cache->rect_count = 0;
-  int max_x = cache->surface_rect.width / CELL_SIZE + 1;
-  int max_y = cache->surface_rect.height / CELL_SIZE + 1;
+  int max_x = surf_rect_rel.width / CELL_SIZE + 1;
+  int max_y = surf_rect_rel.height / CELL_SIZE + 1;
   for (int y = 0; y < max_y; y++) {
     for (int x = 0; x < max_x; x++) {
       /* compare previous and current cell for change */
@@ -310,7 +312,7 @@ void rencache_end_frame(RenCache* cache, RenSurface *rs) {
     r->y *= CELL_SIZE;
     r->width *= CELL_SIZE;
     r->height *= CELL_SIZE;
-    *r = intersect_rects(*r, cache->surface_rect);
+    *r = intersect_rects(*r, surf_rect_rel);
   }
 
   /* redraw updated regions */
