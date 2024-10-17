@@ -9,6 +9,7 @@ void rensurf_init(RenSurface *rs, int x_origin, int y_origin) {
 void rensurf_setup(RenSurface *rs, SDL_Renderer *renderer, int w, int h, int scale) {
   /* Note that w and h here should always be in pixels and obtained from
      a call to SDL_GL_GetDrawableSize(). */
+  fprintf(stderr, "DEBUG: creating new surface (%4d, %4d)[%d]\n", w, h, scale);
   if (rs->surface) {
     SDL_FreeSurface(rs->surface);
   }
