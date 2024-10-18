@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "renwindow.h"
 
+#include <SDL_image.h>
+
 /* Query surface size and returns the scale factor. */
 static int get_window_pixels_size(RenWindow *ren, int *w_pixels, int *h_pixels) {
   int w_points, h_points;
@@ -28,6 +30,8 @@ void renwin_init_renderer(RenWindow *ren) {
 void renwin_resize_window(RenWindow *ren) {
   ren->scale = get_window_pixels_size(ren, &ren->w_pixels, &ren->h_pixels);
 }
+
+#include "debug-image-save.c"
 
 void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
   /* Width and height of the surface, in pixels. */
