@@ -21,7 +21,7 @@ void rensurf_setup(RenSurface *rs, SDL_Renderer *renderer, int w, int h, int sca
   if (rs->texture) {
     SDL_DestroyTexture(rs->texture);
   }
-  rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+  rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STATIC, w, h);
   rs->scale = scale;
 }
 

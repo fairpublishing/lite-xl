@@ -733,6 +733,7 @@ function core.init()
   core.visited_files = {}
   core.restart_request = false
   core.quit_request = false
+  core.drawing_surfaces = {}
 
   -- We load core views before plugins that may need them.
   ---@type core.rootview
@@ -1301,6 +1302,14 @@ function core.compose_window_title(title)
 end
 
 
+function core.present_drawing_surfaces()
+  for id, surface in pairs(core.drawing_surfaces) do
+    renderer.present_surface(surface)
+  end
+  core.drawing_surfaces = { }
+end
+
+
 function core.step()
   -- handle events
   local did_keymap = false
@@ -1342,11 +1351,9 @@ function core.step()
   end
 
   -- draw
-  -- renderer.begin_frame()
   core.clip_rect_stack[1] = { 0, 0, width, height }
-  -- renderer.set_clip_rect(table.unpack(core.clip_rect_stack[1]))
   core.root_view:draw()
-  -- renderer.end_frame()
+  core.present_drawing_surfaces()
   renderer.present_window()
   return true
 end
@@ -1461,6 +1468,19 @@ function core.on_error(err)
     if doc:is_dirty() and doc.filename then
       doc:save(doc.filename .. "~")
     end
+  end
+end
+
+-- Ensure the surface is set to be actually "presented" and draw the
+-- background when first used.
+-- The role of the surface_id is to ensure the same surface is not drawn
+-- multiple times.
+function core.set_surface_to_draw(surface, surface_id, background)
+  if not core.drawing_surfaces[surface_id] then
+    renderer.begin_frame(surface)
+    local x, y, w, h = surface:get_rect()
+    renderer.draw_rect(x, y, w, h, background)
+    core.drawing_surfaces[surface_id] = surface
   end
 end
 

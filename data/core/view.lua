@@ -28,20 +28,6 @@ function View:new()
 end
 
 
--- Ensure the surface is set to be actually "presented" and draw the
--- background when first used.
--- The role of the surface_id is to ensure the same surface is not drawn
--- multiple times.
-function View:set_surface_to_draw(surface, surface_id, background)
-  if not self.surface_to_draw[surface_id] then
-    renderer.begin_frame(surface)
-    local x, y, w, h = surface:get_rect()
-    renderer.draw_rect(x, y, w, h, background)
-    self.surface_to_draw[surface_id] = surface
-  end
-end
-
-
 function View.surface_from_list(surface_list, id, x, y, w, h)
   local surface = surface_list[id]
   local surf_x, surf_y, surf_w, surf_h
@@ -63,15 +49,7 @@ end
 
 function View:set_surface_for(name, x, y, w, h, background)
   local surface = View.surface_from_list(self.named_surfaces, name, x, y, w, h, background)
-  self:set_surface_to_draw(surface, name, background or style.background)
-end
-
-
-function View:present_surfaces()
-  for id, surface in pairs(self.surface_to_draw) do
-    renderer.present_surface(surface)
-  end
-  self.surface_to_draw = { }
+  core.set_surface_to_draw(surface, name, background or style.background)
 end
 
 

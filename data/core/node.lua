@@ -597,7 +597,6 @@ function Node:draw_tabs(view)
     common.draw_text(style.icon_font, right_button_style, ">", nil, xrb + scroll_padding, yrb, 0, h)
   end
 
-  view:present_surfaces()
   core.pop_viewport_rect()
 end
 
