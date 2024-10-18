@@ -26,4 +26,4 @@ else
     # on macOS we need to enable opengl and render
     packages=(pcre2 freetype2 "sdl2 -threads -opengl -render -loadso" "lua")
 fi
-
+packages+=(zlib libpng16 "sdl2-image -save-png")
