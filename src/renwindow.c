@@ -30,7 +30,8 @@ void renwin_resize_window(RenWindow *ren) {
 
 void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
   /* Width and height of the surface, in pixels. */
-  const int w = rs->surface->w, h = rs->surface->h;
+  int w, h;
+  rensurf_get_size(rs, &w, &h);
   fprintf(stderr, "DEBUG: render surface (%4d, %4d) to position (%4d, %4d)\n", w, h, x, y);
   if (0 && w > 0 && h > 0) {
     char buf[1024];

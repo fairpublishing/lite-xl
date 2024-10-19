@@ -16,6 +16,7 @@ extern void rensurf_init(RenSurface *rs, SDL_Renderer *renderer, int x, int y, i
 extern void rensurf_update_rects(RenSurface *rs, RenRect *rects, int count);
 extern void rensurf_free(RenSurface *rs);
 extern void rensurf_get_rect(RenSurface *rs, int *x, int *y, int *w, int *h);
+extern void rensurf_get_size(RenSurface *rs, int *w, int *h);
 
 #endif
 

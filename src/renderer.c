@@ -409,6 +409,7 @@ double ren_font_group_get_width(RenFont **fonts, const char *text, size_t len, i
 
 double ren_draw_text(RenSurface *rs, RenFont **fonts, const char *text, size_t len, float x, int y, RenColor color) {
   SDL_Surface *surface = rs->surface;
+  if (!surface) return x + 1.0; // FIXME
   SDL_Rect clip;
   SDL_GetClipRect(surface, &clip);
 
@@ -509,9 +510,8 @@ static inline RenColor blend_pixel(RenColor dst, RenColor src) {
 }
 
 void ren_draw_rect(RenSurface *rs, RenRect rect, RenColor color) {
-  if (color.a == 0) { return; }
-
   SDL_Surface *surface = rs->surface;
+  if (color.a == 0 || !surface) { return; }
   const int surface_scale = rs->scale;
 
   SDL_Rect dest_rect = { rect.x * surface_scale,
@@ -563,12 +563,15 @@ void ren_resize_window(RenWindow *window_renderer) {
 
 
 void ren_set_clip_rect(RenSurface *rs, RenRect rect) {
+  if (!rs->surface) return;
   RenRect sr = scaled_rect(rect, rs->scale);
   SDL_SetClipRect(rs->surface, &(SDL_Rect){.x = sr.x, .y = sr.y, .w = sr.width, .h = sr.height});
 }
 
 
-void ren_get_size(RenSurface *rs, int *x, int *y) {
-  *x = rs->surface->w / rs->scale;
-  *y = rs->surface->h / rs->scale;
+void ren_get_size(RenSurface *rs, int *w, int *h) {
+  int wu, hu;
+  rensurf_get_size(rs, &wu, &hu);
+  *w = wu / rs->scale;
+  *h = hu / rs->scale;
 }
