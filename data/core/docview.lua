@@ -107,7 +107,7 @@ function DocView:surface_for_content(tile_i, tile_j)
   -- FIXME: it can be expensive to generate this id string every time
   io.stderr:write(string.format("DEBUG: content surface (%4g, %4g) at position (%4g, %4g)\n", w, h, x, y))
   local tile_id = string.format("c %d %d", tile_i, tile_j)
-  core.set_surface_to_draw(surface, tile_id, style.background)
+  self:set_surface_to_draw(surface, tile_id, style.background)
 end
 
 
@@ -119,7 +119,7 @@ function DocView:surface_for_gutter(tile_j)
   local surface = self.surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
   io.stderr:write(string.format("DEBUG: gutter surface (%4g, %4g) at position (%4g, %4g)\n", w, h, x, y))
   local tile_id = string.format("g %d", tile_j)
-  core.set_surface_to_draw(surface, tile_id, style.background)
+  self:set_surface_to_draw(surface, tile_id, style.background)
 end
 
 
@@ -726,6 +726,7 @@ function DocView:draw()
   core.pop_viewport_rect()
 
   self:draw_scrollbar()
+  self:present_surfaces()
 end
 
 

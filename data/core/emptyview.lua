@@ -49,6 +49,7 @@ function EmptyView:draw()
   local x = self.position.x + math.max(style.padding.x, (self.size.x - w) / 2)
   local y = self.position.y + (self.size.y - h) / 2
   draw_text(x, y, style.dim)
+  self:present_surfaces()
 end
 
 return EmptyView

@@ -85,6 +85,7 @@ function ToolbarView:draw()
     local color = item == self.hovered_item and command.is_valid(item.command) and style.text or style.dim
     common.draw_text(self.toolbar_font, color, item.symbol, nil, x, y, 0, h)
   end
+  self:present_surfaces()
 end
 
 

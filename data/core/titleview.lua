@@ -133,6 +133,7 @@ function TitleView:draw()
   self:set_surface_for("title", self.position.x, self.position.y, self.size.x, self.size.y, style.background2)
   self:draw_window_title()
   self:draw_window_controls()
+  self:present_surfaces()
 end
 
 return TitleView

@@ -1167,6 +1167,7 @@ function StatusView:draw()
       end
     end
   end
+  self:present_surfaces()
 end
 
 return StatusView

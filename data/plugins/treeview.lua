@@ -275,10 +275,11 @@ function TreeView:draw_tooltip()
 
   local bx, by = x - tooltip_border, y - tooltip_border
   local bw, bh = w + 2 * tooltip_border, h + 2 * tooltip_border
-  self:set_surface_for("tooltip", bx, by, bw, bh, style.background)
+  local background = replace_alpha(style.background2, self.tooltip.alpha)
+  self:set_surface_for("tooltip", bx, by, bw, bh, background)
   renderer.draw_rect(bx, by, bw, bh, replace_alpha(style.text, self.tooltip.alpha))
-  renderer.draw_rect(x, y, w, h, replace_alpha(style.background2, self.tooltip.alpha))
   common.draw_text(style.font, replace_alpha(style.text, self.tooltip.alpha), text, "center", x, y, w, h)
+  self:present_surfaces()
 end
 
 
@@ -384,6 +385,8 @@ function TreeView:draw()
   if self.hovered_item and self.tooltip.x and self.tooltip.alpha > 0 then
     core.root_view:defer_draw(self.draw_tooltip, self)
   end
+
+  self:present_surfaces()
 end
 
 
