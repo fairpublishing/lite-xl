@@ -453,7 +453,7 @@ end
 
 function RootView:draw()
   self.root_node:draw()
-  renderer.set_viewport() -- reset the viewport to the entire window
+  renderer.set_render_clip_rect() -- reset the viewport to the entire window
   while #self.deferred_draws > 0 do
     local t = table.remove(self.deferred_draws)
     t.fn(table.unpack(t))

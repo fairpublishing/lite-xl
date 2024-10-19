@@ -566,7 +566,7 @@ function Node:draw_tabs(view)
   local x = self.position.x
   local ds = style.divider_size
 
-  core.push_viewport_rect(x, y, self.size.x, h)
+  core.push_clip_rect(x, y, self.size.x, h)
   self:get_id() -- we need an id to draw tabs because we want a named surface
   local surface_id = "tab " .. tostring(self.id)
   view:set_surface_for(surface_id, x, y, self.size.x, h, style.background2)
@@ -598,7 +598,7 @@ function Node:draw_tabs(view)
   end
 
   view:present_surfaces()
-  core.pop_viewport_rect()
+  core.pop_clip_rect()
 end
 
 
@@ -608,9 +608,9 @@ function Node:draw()
       self:draw_tabs(core.root_view)
     end
     local pos, size = self.active_view.position, self.active_view.size
-    core.push_viewport_rect(pos.x, pos.y, size.x, size.y)
+    core.push_clip_rect(pos.x, pos.y, size.x, size.y)
     self.active_view:draw()
-    core.pop_viewport_rect()
+    core.pop_clip_rect()
   else
     local x, y, w, h = self:get_divider_rect()
     -- directly draw the rectangle using the SDL renderer, without using

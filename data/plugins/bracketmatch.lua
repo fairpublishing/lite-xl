@@ -182,12 +182,12 @@ local function redraw_char(dv, x, y, line, col, bg_color, char_color)
 
   if not bg_color then
     -- redraw background
-    core.push_viewport_rect(x1, y, x2 - x1, lh)
+    core.push_clip_rect(x1, y, x2 - x1, lh)
     local dlt = DocView.draw_line_text
     DocView.draw_line_text = function() end
     dv:draw_line_body(line, x, y)
     DocView.draw_line_text = dlt
-    core.pop_viewport_rect()
+    core.pop_clip_rect()
   else
     renderer.draw_rect(x1, y, x2 - x1, lh, bg_color)
   end

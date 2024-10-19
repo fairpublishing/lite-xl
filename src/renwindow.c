@@ -52,8 +52,8 @@ void renwin_present(RenWindow *ren) {
   SDL_RenderPresent(ren->renderer);
 }
 
-void renwin_set_viewport(RenWindow *ren, const SDL_Rect *r) {
-  SDL_RenderSetViewport(ren->renderer, r);
+void renwin_set_clip_rect(RenWindow *ren, const SDL_Rect *r) {
+  SDL_RenderSetClipRect(ren->renderer, r);
 }
 
 void renwin_free(RenWindow *ren) {

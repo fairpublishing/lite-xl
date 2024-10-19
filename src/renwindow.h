@@ -15,7 +15,7 @@ void renwin_init_renderer(RenWindow *ren);
 void renwin_resize_window(RenWindow *ren);
 void renwin_present(RenWindow *ren);
 void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y);
-void renwin_set_viewport(RenWindow *ren, const SDL_Rect *r);
+void renwin_set_clip_rect(RenWindow *ren, const SDL_Rect *r);
 void renwin_free(RenWindow *ren);
 void renwin_render_fill_rect(RenWindow *ren, SDL_Rect *rect, SDL_Color color);
 

@@ -718,12 +718,12 @@ function DocView:draw()
   x, y = self:get_line_screen_position(minline)
   -- the clip below ensure we don't write on the gutter region. On the
   -- right side it is redundant with the Node's clip.
-  core.push_viewport_rect(pos.x + gw, pos.y, self.size.x - gw, self.size.y)
+  core.push_clip_rect(pos.x + gw, pos.y, self.size.x - gw, self.size.y)
   for i = minline, maxline do
     y = y + (self:draw_line_body(i, x, y) or lh)
   end
   self:draw_overlay()
-  core.pop_viewport_rect()
+  core.pop_clip_rect()
 
   self:draw_scrollbar()
   self:present_surfaces()

@@ -420,36 +420,36 @@ static int f_render_fill_rect(lua_State *L) {
   return 0;
 }
 
-static int f_set_viewport(lua_State *L) {
+static int f_set_render_clip_rect(lua_State *L) {
   int nargs = lua_gettop(L);
   if (nargs == 0) {
-    renwin_set_viewport(&window_renderer, NULL);
+    renwin_set_clip_rect(&window_renderer, NULL);
   } else {
     lua_Number x = luaL_checknumber(L, 1);
     lua_Number y = luaL_checknumber(L, 2);
     lua_Number w = luaL_checknumber(L, 3);
     lua_Number h = luaL_checknumber(L, 4);
-    renwin_set_viewport(&window_renderer, &(SDL_Rect){ x, y, w, h });
+    renwin_set_clip_rect(&window_renderer, &(SDL_Rect){ x, y, w, h });
   }
   return 0;
 }
 
 
 static const luaL_Reg lib[] = {
-  { "show_debug",         f_show_debug         },
-  { "get_size",           f_get_size           },
-  { "begin_frame",        f_begin_frame        },
-  { "clear_font_refs",    f_clear_font_refs    },
-  { "set_clip_rect",      f_set_clip_rect      },
-  { "clear_clip_rect",    f_clear_clip_rect    },
-  { "draw_rect",          f_draw_rect          },
-  { "draw_text",          f_draw_text          },
-  { "set_viewport",       f_set_viewport       },
-  { "present_surface" ,   f_present_surface    },
-  { "present_window",     f_present_window     },
-  { "render_fill_rect",   f_render_fill_rect   },
-  { "set_current_surface", f_set_current_surface },
-  { NULL,                 NULL                 }
+  { "show_debug",           f_show_debug           },
+  { "get_size",             f_get_size             },
+  { "begin_frame",          f_begin_frame          },
+  { "clear_font_refs",      f_clear_font_refs      },
+  { "set_clip_rect",        f_set_clip_rect        },
+  { "clear_clip_rect",      f_clear_clip_rect      },
+  { "draw_rect",            f_draw_rect            },
+  { "draw_text",            f_draw_text            },
+  { "set_render_clip_rect", f_set_render_clip_rect },
+  { "present_surface" ,     f_present_surface      },
+  { "present_window",       f_present_window       },
+  { "render_fill_rect",     f_render_fill_rect     },
+  { "set_current_surface",  f_set_current_surface  },
+  { NULL, NULL }
 };
 
 static const luaL_Reg fontLib[] = {

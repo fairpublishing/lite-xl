@@ -473,9 +473,9 @@ local function draw_suggestions_box(av)
 
     local color = (i == suggestions_idx) and style.accent or style.text
     -- Push clip to avoid that the suggestion text gets drawn over suggestion type/icon
-    core.push_viewport_rect(rx + style.padding.x, y, rw - info_size - style.padding.x, lh)
+    core.push_clip_rect(rx + style.padding.x, y, rw - info_size - style.padding.x, lh)
     local x_adv = common.draw_text(font, color, s.text, "left", rx + style.padding.x, y, rw, lh)
-    core.pop_viewport_rect()
+    core.pop_clip_rect()
     -- If the text wasn't fully visible, draw an ellipsis
     if x_adv > rx + rw - info_size then
       local ellipsis_size = font:get_width("…")

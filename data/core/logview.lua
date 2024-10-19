@@ -179,7 +179,7 @@ function LogView:draw()
   local tw = style.font:get_width(datestr)
   for _, item, x, y, w, h in self:each_item() do
     if y + h >= self.position.y and y <= self.position.y + self.size.y then
-      core.push_viewport_rect(x, y, w, h)
+      core.push_clip_rect(x, y, w, h)
       x = x + style.padding.x
 
       x = common.draw_text(
@@ -216,7 +216,7 @@ function LogView:draw()
         _, y = common.draw_text(style.font, style.text, line, "left", x, y, w, lh)
       end
 
-      core.pop_viewport_rect()
+      core.pop_clip_rect()
     end
   end
   LogView.super.draw_scrollbar(self)
