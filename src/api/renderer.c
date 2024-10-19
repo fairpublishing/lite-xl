@@ -486,9 +486,7 @@ static int f_rensurf_create(lua_State *L) {
     luaL_getmetatable(L, API_TYPE_RENSURFACE);
     lua_setmetatable(L, -2);
 
-    rensurf_init(rs, x, y);
-    rensurf_setup(rs, renderer, w, h, scale);
-
+    rensurf_init(rs, renderer, x, y, w, h, scale);
     return 1;
 }
 

@@ -1,27 +1,19 @@
 #include "rensurface.h"
 
-void rensurf_init(RenSurface *rs, int x_origin, int y_origin) {
-  rs->surface = NULL;
-  rs->texture = NULL;
-  rencache_init(&rs->rencache, x_origin, y_origin);
-}
-
-void rensurf_setup(RenSurface *rs, SDL_Renderer *renderer, int w, int h, int scale) {
+void rensurf_init(RenSurface *rs, SDL_Renderer *renderer, int x, int y, int w, int h, int scale) {
   /* Note that w and h here should always be in pixels and obtained from
      a call to SDL_GL_GetDrawableSize(). */
+  rs->surface = NULL;
+  rs->texture = NULL;
+  rencache_init(&rs->rencache, x, y);
+
   fprintf(stderr, "DEBUG: creating new surface (%4d, %4d)[%d]\n", w, h, scale);
-  if (rs->surface) {
-    SDL_FreeSurface(rs->surface);
-  }
   rs->surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
-  if (!rs->surface) {
-    fprintf(stderr, "Error creating surface: %s", SDL_GetError());
+  rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STATIC, w, h);
+  if (!rs->surface || !rs->texture) {
+    fprintf(stderr, "Error creating surface or texture: %s", SDL_GetError());
     exit(1);
   }
-  if (rs->texture) {
-    SDL_DestroyTexture(rs->texture);
-  }
-  rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STATIC, w, h);
   rs->scale = scale;
 }
 
