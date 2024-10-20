@@ -1,5 +1,4 @@
-
-static int saveSurfaceToPNG(SDL_Surface* surface, const char* filename) {
+int save_surface_to_png(SDL_Surface* surface, const char* filename) {
     if (IMG_SavePNG(surface, filename) != 0) {
         // Handle error
         SDL_Log("Failed to save PNG: %s", SDL_GetError());
@@ -8,7 +7,7 @@ static int saveSurfaceToPNG(SDL_Surface* surface, const char* filename) {
     return 0;
 }
 
-void save_texture(SDL_Renderer *ren, SDL_Texture *tex, const char *filename)
+void save_texture_to_png(SDL_Renderer *ren, SDL_Texture *tex, const char *filename)
 {
     SDL_Texture *ren_tex;
     SDL_Surface *surf;

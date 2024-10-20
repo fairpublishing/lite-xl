@@ -4,6 +4,7 @@
 #include "../rensurface.h"
 #include "../renwindow.h"
 #include "lua.h"
+#include "debug-image-save.h"
 
 // a reference index to a table that stores the fonts
 static int RENDERER_FONT_REF = LUA_NOREF;
@@ -516,12 +517,28 @@ static int f_rensurf_set_position(lua_State *L) {
     return 0;
 }
 
+static int f_rensurf_save_as_png(lua_State *L) {
+    RenSurface *rs = check_rensurface(L, 1);
+    const char *filename = luaL_checkstring(L, 2);
+
+    if (!rs->surface) {
+        return luaL_error(L, "RenSurface has no surface to save");
+    }
+
+    if (save_surface_to_png(rs->surface, filename) != 0) {
+        return luaL_error(L, "Failed to save surface to PNG");
+    }
+
+    return 0;
+}
+
 // Define the methods for the RenSurface type
 static const luaL_Reg libRenSurface[] = {
     {"__gc",         f_rensurf_free      },
     {"create",       f_rensurf_create    },
     {"get_rect",     f_rensurf_get_rect  },
     {"set_position", f_rensurf_set_position},
+    {"save_as_png",  f_rensurf_save_as_png},
     {NULL, NULL}
 };
 

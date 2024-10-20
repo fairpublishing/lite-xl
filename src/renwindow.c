@@ -35,9 +35,9 @@ void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
   if (0 && w > 0 && h > 0) {
     char buf[1024];
     sprintf(buf, "surface-%d-%d-%d-%d.png", x, y, w, h);
-    saveSurfaceToPNG(rs->surface, buf);
+    save_surface_to_png(rs->surface, buf);
     sprintf(buf, "texture-%d-%d-%d-%d.png", x, y, w, h);
-    save_texture(ren->renderer, rs->texture, buf);
+    save_texture_to_png(ren->renderer, rs->texture, buf);
   }
   const SDL_Rect dst = { x, y, w, h };
   SDL_RenderCopy(ren->renderer, rs->texture, NULL, &dst);
