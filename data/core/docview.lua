@@ -365,7 +365,7 @@ end
 function DocView:scroll_to_line(line, ignore_if_visible, instant)
   local min, max = self:get_visible_line_range()
   if not (ignore_if_visible and line > min and line < max) then
-    local x, y = self:get_line_content_position(line)
+    local x, y = self:get_line_screen_position(line)
     local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
     self.scroll.to.y = math.max(0, y - (self.size.y - scroll_h) / 2)
     if instant then
