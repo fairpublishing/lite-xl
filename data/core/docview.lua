@@ -703,8 +703,23 @@ function DocView:draw()
 
   -- Compute minlines and maxlines rounded in a way to complete the corresponding
   -- tiles.
-  local minline = math.floor((visible_minline - 1) / TILE_LINES) * TILE_LINES + 1
-  local maxline = math.floor((visible_maxline - 1) / TILE_LINES + 1) * TILE_LINES
+  -- Compute first min and max tile_i, j indexes corresponding to tiles visible
+  -- on the screen.
+  -- TODO: computations befor for min/max tile can be done with a single function
+  -- call.
+  local min_tile_j = math.floor((visible_minline - 1) / TILE_LINES)
+  local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES + 1)
+  local min_tile_i = self:get_tile_indexes(self.position.x, 0)
+  local max_tile_i = self:get_tile_indexes(self.position.x + self.size.x, 0)
+  local minline = min_tile_j * TILE_LINES + 1
+  local maxline = max_tile_j * TILE_LINES
+
+  -- Ensure surfaces visible on the screen are "presented" to be drawn
+  for tile_j = min_tile_j + 1, max_tile_j + 1 do
+    for tile_i = min_tile_i, max_tile_i do
+      self:surface_for_content(tile_i, tile_j)
+    end
+  end
 
   local x, y = self:get_line_screen_position(minline)
   local gw, gpad = self:get_gutter_width()
