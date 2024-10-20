@@ -501,14 +501,6 @@ double ren_draw_text(RenSurface *rs, RenFont **fonts, const char *text, size_t l
 }
 
 /******************* Rectangles **********************/
-static inline RenColor blend_pixel(RenColor dst, RenColor src) {
-  int ia = 0xff - src.a;
-  dst.r = ((src.r * src.a) + (dst.r * ia)) >> 8;
-  dst.g = ((src.g * src.a) + (dst.g * ia)) >> 8;
-  dst.b = ((src.b * src.a) + (dst.b * ia)) >> 8;
-  return dst;
-}
-
 void ren_draw_rect(RenSurface *rs, RenRect rect, RenColor color) {
   SDL_Surface *surface = rs->surface;
   if (color.a == 0 || !surface) { return; }
