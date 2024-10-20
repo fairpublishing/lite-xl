@@ -568,10 +568,3 @@ void ren_set_clip_rect(RenSurface *rs, RenRect rect) {
   SDL_SetClipRect(rs->surface, &(SDL_Rect){.x = sr.x, .y = sr.y, .w = sr.width, .h = sr.height});
 }
 
-
-void ren_get_size(RenSurface *rs, int *w, int *h) {
-  int wu, hu;
-  rensurf_get_size(rs, &wu, &hu);
-  *w = wu / rs->scale;
-  *h = hu / rs->scale;
-}

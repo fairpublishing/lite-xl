@@ -235,8 +235,8 @@ void rencache_invalidate(RenCache* cache) {
 void rencache_begin_frame(RenCache* cache, RenSurface* rs) {
   /* reset all cells if the screen width/height has changed */
   int w, h;
+  rensurf_get_size(rs, &w, &h);
   cache->resize_issue = false;
-  ren_get_size(rs, &w, &h);
   if (cache->surface_rect.width != w || h != cache->surface_rect.height) {
     cache->surface_rect.width = w;
     cache->surface_rect.height = h;

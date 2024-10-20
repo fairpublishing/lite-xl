@@ -39,7 +39,7 @@ void renwin_render_surface(RenWindow *ren, RenSurface *rs, int x, int y) {
     sprintf(buf, "texture-%d-%d-%d-%d.png", x, y, w, h);
     save_texture_to_png(ren->renderer, rs->texture, buf);
   }
-  const SDL_Rect dst = { x, y, w, h };
+  const SDL_Rect dst = { x * rs->scale, y * rs->scale, w * rs->scale, h * rs->scale };
   SDL_RenderCopy(ren->renderer, rs->texture, NULL, &dst);
 }
 
@@ -53,7 +53,13 @@ void renwin_present(RenWindow *ren) {
 }
 
 void renwin_set_clip_rect(RenWindow *ren, const SDL_Rect *r) {
-  SDL_RenderSetClipRect(ren->renderer, r);
+  const int scale = ren->scale;
+  if (r) {
+    SDL_Rect r_scaled = {r->x * scale, r->y * scale, r->w * scale, r->h * scale};
+    SDL_RenderSetClipRect(ren->renderer, &r_scaled);
+  } else {
+    SDL_RenderSetClipRect(ren->renderer, NULL);
+  }
 }
 
 void renwin_free(RenWindow *ren) {
@@ -62,7 +68,9 @@ void renwin_free(RenWindow *ren) {
   SDL_DestroyRenderer(ren->renderer);
 }
 
-void renwin_render_fill_rect(RenWindow *ren, SDL_Rect *rect, SDL_Color color) {
+void renwin_render_fill_rect(RenWindow *ren, SDL_Rect *r, SDL_Color color) {
+  const int scale = ren->scale;
+  SDL_Rect r_scaled = {r->x * scale, r->y * scale, r->w * scale, r->h * scale};
   SDL_SetRenderDrawColor(ren->renderer, color.r, color.g, color.b, color.a);
-  SDL_RenderFillRect(ren->renderer, rect);
+  SDL_RenderFillRect(ren->renderer, &r_scaled);
 }

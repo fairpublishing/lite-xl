@@ -294,8 +294,8 @@ static int f_show_debug(lua_State *L) {
 static int f_get_size(lua_State *L) {
   int w, h, scale;
   scale = renwin_get_size(&window_renderer, &w, &h);
-  lua_pushnumber(L, w);
-  lua_pushnumber(L, h);
+  lua_pushnumber(L, w / scale);
+  lua_pushnumber(L, h / scale);
   lua_pushnumber(L, scale);
   return 3;
 }

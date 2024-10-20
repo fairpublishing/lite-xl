@@ -8,8 +8,9 @@ void rensurf_init(RenSurface *rs, SDL_Renderer *renderer, int x, int y, int w, i
   rencache_init(&rs->rencache, x, y);
 
   if (w > 0 && h > 0) {
-    rs->surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
-    rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STATIC, w, h);
+    const int w_scaled = w * scale, h_scaled = h * scale;
+    rs->surface = SDL_CreateRGBSurfaceWithFormat(0, w_scaled, h_scaled, 32, SDL_PIXELFORMAT_BGRA32);
+    rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STATIC, w_scaled, h_scaled);
     if (!rs->surface || !rs->texture) {
       fprintf(stderr, "Error creating surface or texture: %s", SDL_GetError());
       exit(1);
@@ -42,12 +43,12 @@ void rensurf_free(RenSurface *rs) {
 void rensurf_get_rect(RenSurface *rs, int *x, int *y, int *w, int *h) {
   *x = rs->rencache.x_origin;
   *y = rs->rencache.y_origin;
-  *w = rs->surface ? rs->surface->w : 0;
-  *h = rs->surface ? rs->surface->h : 0;
+  *w = (rs->surface ? rs->surface->w : 0) / rs->scale;
+  *h = (rs->surface ? rs->surface->h : 0) / rs->scale;
 }
 
 void rensurf_get_size(RenSurface *rs, int *w, int *h) {
-  *w = rs->surface ? rs->surface->w : 0;
-  *h = rs->surface ? rs->surface->h : 0;
+  *w = (rs->surface ? rs->surface->w : 0) / rs->scale;
+  *h = (rs->surface ? rs->surface->h : 0) / rs->scale;
 }
 
