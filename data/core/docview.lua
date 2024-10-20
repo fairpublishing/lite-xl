@@ -28,7 +28,7 @@ end
 
 function DocView:get_content_body_offset()
   local x, y = self:get_content_offset()
-  return x + self:get_gutter_width(), y
+  return x + self:get_gutter_width(), y + style.padding.y
 end
 
 function DocView:get_tile_indexes(x, y)
