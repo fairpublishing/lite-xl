@@ -35,7 +35,7 @@ function DocView:get_tile_indexes(x, y)
   local h = self.tiles_metric.line_height * TILE_LINES
   local w = self.tiles_metric.char_width * TILE_CHARACTERS
   local x_o, y_o = self:get_content_body_offset()
-  return math.floor((x - x_o) / w) + 1, math.floor((y - y_o) / w) + 1
+  return math.floor((x - x_o) / w) + 1, math.floor((y - y_o) / h) + 1
 end
 
 
