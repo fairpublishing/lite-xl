@@ -8,7 +8,6 @@ void rensurf_init(RenSurface *rs, SDL_Renderer *renderer, int x, int y, int w, i
   rencache_init(&rs->rencache, x, y);
 
   if (w > 0 && h > 0) {
-    fprintf(stderr, "DEBUG: creating new surface (%4d, %4d)[%d]\n", w, h, scale);
     rs->surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
     rs->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STATIC, w, h);
     if (!rs->surface || !rs->texture) {

@@ -42,10 +42,8 @@ local function draw_text(x, y, color)
 end
 
 function EmptyView:draw()
-  print("DEBUG: empty view", self.position.x, self.position.y, self.size.x, self.size.y)
   self:set_surface_for("empty", self.position.x, self.position.y, self.size.x, self.size.y, style.background)
   local w, h = draw_text(0, 0, { 0, 0, 0, 0 })
-  renderer.draw_text(style.font, "abc123", self.position.x, self.position.y + 15, style.dim)
   local x = self.position.x + math.max(style.padding.x, (self.size.x - w) / 2)
   local y = self.position.y + (self.size.y - h) / 2
   draw_text(x, y, style.dim)
