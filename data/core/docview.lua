@@ -103,7 +103,7 @@ function DocView:surface_for_content(tile_i, tile_j)
     self.content_surfaces[tile_i] = column_surfaces
   end
 
-  local surface = self:surface_from_list(column_surfaces, tile_j, x, y, w, h)
+  local surface = self.surface_from_list(column_surfaces, tile_j, x, y, w, h)
   -- FIXME: it can be expensive to generate this id string every time
   local tile_id = string.format("c %d %d", tile_i, tile_j)
   self:set_surface_to_draw(surface, tile_id, style.background)
