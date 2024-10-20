@@ -711,8 +711,8 @@ function DocView:draw()
   local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES + 1)
   local min_tile_i = self:get_tile_indexes(self.position.x, 0)
   local max_tile_i = self:get_tile_indexes(self.position.x + self.size.x, 0)
-  local minline = min_tile_j * TILE_LINES + 1
-  local maxline = max_tile_j * TILE_LINES
+  local minline = math.max(1, min_tile_j * TILE_LINES + 1)
+  local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
 
   -- Ensure surfaces visible on the screen are "presented" to be drawn
   for tile_j = min_tile_j + 1, max_tile_j + 1 do
