@@ -25,6 +25,7 @@ function View:new()
   -- drawing surfaces variables
   self.named_surfaces = { }
   self.surface_to_draw = { }
+  self.surface_ids = { }
 end
 
 
@@ -38,6 +39,7 @@ function View:set_surface_to_draw(surface, surface_id, background)
     local x, y, w, h = surface:get_rect()
     renderer.draw_rect(x, y, w, h, background)
     self.surface_to_draw[surface_id] = surface
+    table.insert(self.surface_ids, surface_id)
   end
 end
 
@@ -68,10 +70,11 @@ end
 
 
 function View:present_surfaces()
-  for id, surface in pairs(self.surface_to_draw) do
-    renderer.present_surface(surface)
+  for _, surface_id in ipairs(self.surface_ids) do
+    renderer.present_surface(self.surface_to_draw[surface_id])
   end
   self.surface_to_draw = { }
+  self.surface_ids = { }
 end
 
 
