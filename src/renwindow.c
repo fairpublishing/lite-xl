@@ -5,7 +5,7 @@
 #include <SDL_image.h>
 
 /* Query surface size and returns the scale factor. */
-int renwin_get_size(RenWindow *ren, int *w_pixels, int *h_pixels) {
+static int get_window_pixels_size(RenWindow *ren, int *w_pixels, int *h_pixels) {
   int w_points, h_points;
   SDL_GL_GetDrawableSize(ren->window, w_pixels, h_pixels);
   SDL_GetWindowSize(ren->window, &w_points, &h_points);
@@ -16,14 +16,19 @@ int renwin_get_size(RenWindow *ren, int *w_pixels, int *h_pixels) {
 }
 
 
+void renwin_get_size(RenWindow *ren, int *w, int *h) {
+  SDL_GetWindowSize(ren->window, w, h);
+}
+
+
 void renwin_init_renderer(RenWindow *ren) {
   /* We assume here "ren" is zero-initialized */
   ren->renderer = SDL_CreateRenderer(ren->window, -1, 0);
-  ren->scale = renwin_get_size(ren, &ren->w_pixels, &ren->h_pixels);
+  ren->scale = get_window_pixels_size(ren, &ren->w_pixels, &ren->h_pixels);
 }
 
 void renwin_resize_window(RenWindow *ren) {
-  ren->scale = renwin_get_size(ren, &ren->w_pixels, &ren->h_pixels);
+  ren->scale = get_window_pixels_size(ren, &ren->w_pixels, &ren->h_pixels);
 }
 
 #include "debug-image-save.c"

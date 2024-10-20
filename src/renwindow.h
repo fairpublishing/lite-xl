@@ -10,7 +10,7 @@ struct RenWindow {
 };
 typedef struct RenWindow RenWindow;
 
-int renwin_get_size(RenWindow *ren, int *w_pixels, int *h_pixels);
+void renwin_get_size(RenWindow *ren, int *w, int *h);
 void renwin_init_renderer(RenWindow *ren);
 void renwin_resize_window(RenWindow *ren);
 void renwin_present(RenWindow *ren);
