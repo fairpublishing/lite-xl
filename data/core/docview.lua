@@ -50,6 +50,8 @@ function DocView:draw_line_content_text(font, text, x, y, color)
   local tile_w, tile_h = self:get_tile_size()
   local tile_i, tile_j = self:get_tile_indexes(x, y)
 
+  if tile_j < 1 then return x, false end
+
   -- compute x_tile as the x coordinate of the left border of the tile
   local x_tile = x_o + tile_w * (tile_i - 1)
   local x_rlimit = self.position.x + self.size.x
@@ -58,8 +60,10 @@ function DocView:draw_line_content_text(font, text, x, y, color)
   while x_tile < x_rlimit and (not x_text_end or x_tile < x_text_end) do
     if x_tile + tile_w > self.position.x then
       -- the tile is visible on the screen: get its surface and draw on it
-      self:surface_for_content(tile_i, tile_j)
-      x_text_end = renderer.draw_text(font, text, x, y, color)
+      if tile_i > 0 then
+        self:surface_for_content(tile_i, tile_j)
+        x_text_end = renderer.draw_text(font, text, x, y, color)
+      end
     end
     x_tile = x_tile + tile_w
     tile_i = tile_i + 1
@@ -123,7 +127,7 @@ end
 
 function DocView:setup_tiles_for_drawing()
   local new_lh = self:get_line_height()
-  local new_cw = self:get_font():get_width(' ')
+  local new_cw = math.ceil(self:get_font():get_width(' '))
   local new_gw, gpad = self:get_gutter_width()
   -- FIXME: include also the surface scale here
 
@@ -262,7 +266,7 @@ end
 function DocView:get_line_screen_position(line, col)
   local x, y = self:get_content_body_offset()
   local lh = self:get_line_height()
-  y = y + (line-1) * lh + style.padding.y
+  y = y + (line-1) * lh
   if col then
     return x + self:get_col_x_offset(line, col), y
   else
