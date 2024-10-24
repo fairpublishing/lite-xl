@@ -718,6 +718,11 @@ function DocView:draw()
   local minline = math.max(1, min_tile_j * TILE_LINES + 1)
   local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
 
+  if min_tile_j <= 1 then
+    local x_o, y_o = self:get_content_offset()
+    self:set_surface_for("ypad", x_o, y_o, self.size.x, style.padding.y, style.background)
+  end
+
   -- Ensure surfaces visible on the screen are "presented" to be drawn
   for tile_j = min_tile_j + 1, max_tile_j + 1 do
     for tile_i = min_tile_i, max_tile_i do
