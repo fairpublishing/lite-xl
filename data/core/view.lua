@@ -23,27 +23,24 @@ function View:new()
   self.current_scale = SCALE
 
   -- drawing surfaces variables
+  -- name_surfaces is used to store and persist drawing surfaces. The keys are
+  -- strings that must be unique only within the view instance.
   self.named_surfaces = { }
+
+  -- array of surfaces that needs to be rendered at the end of the draw() function
   self.surface_to_draw = { }
-  self.surface_ids = { }
 end
 
 
--- Ensure the surface is set to be actually "presented" and draw the
--- background when first used.
--- The role of the surface_id is to ensure the same surface is not drawn
--- multiple times.
-function View:set_surface_to_draw(surface, surface_id, background)
-  if not self.surface_to_draw[surface_id] then
-    renderer.begin_frame(surface)
-    local x, y, w, h = surface:get_rect()
-    renderer.draw_rect(x, y, w, h, background)
-    self.surface_to_draw[surface_id] = surface
-    table.insert(self.surface_ids, surface_id)
-  end
+-- add the surface to the list to be rendered on the screen
+function View:set_surface_to_draw(surface)
+  table.insert(self.surface_to_draw, surface)
 end
 
 
+-- select a surface from a list, create one and add to it if it doesn't exist.
+-- adjust the size if it does not match with the existing surface.
+-- ensure the surface is associated with the given position
 function View.surface_from_list(surface_list, id, x, y, w, h)
   local surface = surface_list[id]
   local surf_x, surf_y, surf_w, surf_h
@@ -58,23 +55,23 @@ function View.surface_from_list(surface_list, id, x, y, w, h)
     -- here we may call set_position() unconditionally
     surface:set_position(x, y)
   end
-  renderer.set_current_surface(surface)
   return surface
 end
 
 
 function View:set_surface_for(name, x, y, w, h, background)
-  local surface = View.surface_from_list(self.named_surfaces, name, x, y, w, h, background)
-  self:set_surface_to_draw(surface, name, background or style.background)
+  local surface = View.surface_from_list(self.named_surfaces, name, x, y, w, h)
+  renderer.set_current_surface(surface)
+  renderer.begin_frame(surface, background or style.background)
+  self:set_surface_to_draw(surface)
 end
 
 
 function View:present_surfaces()
-  for _, surface_id in ipairs(self.surface_ids) do
-    renderer.present_surface(self.surface_to_draw[surface_id])
+  for _, surface in ipairs(self.surface_to_draw) do
+    renderer.present_surface(surface)
   end
   self.surface_to_draw = { }
-  self.surface_ids = { }
 end
 
 

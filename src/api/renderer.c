@@ -302,7 +302,14 @@ static int f_get_size(lua_State *L) {
 
 static int f_begin_frame(lua_State *L) {
   RenSurface *rs = check_rensurface(L, 1);
-  rencache_begin_frame(&rs->rencache, rs);
+  RenCache *cache = &rs->rencache;
+  rencache_begin_frame(cache, rs);
+  if (!lua_isnoneornil(L, 2)) {
+    RenColor color = checkcolor(L, 2, 255);
+    const int x = cache->x_origin, y = cache->y_origin;
+    const int w = cache->surface_rect.width, h = cache->surface_rect.height;
+    rencache_draw_rect(&rs->rencache, (RenRect){x, y, w, h}, color);
+  }
   return 0;
 }
 

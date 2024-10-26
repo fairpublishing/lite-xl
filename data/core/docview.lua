@@ -15,6 +15,7 @@ local DocView = View:extend()
 
 DocView.context = "session"
 
+
 local function move_to_line_offset(dv, line, col, offset)
   local xo = dv.last_x_offset
   if xo.line ~= line or xo.col ~= col then
@@ -26,10 +27,10 @@ local function move_to_line_offset(dv, line, col, offset)
 end
 
 
-function DocView:get_content_body_offset()
-  local x, y = self:get_content_offset()
-  return x + self:get_gutter_width(), y + style.padding.y
+local function compose_tile_id(tile_1, tile_2)
+  return ":" .. (tile_2 and (tile_1 .. " " .. tile_2) or tile_1)
 end
+
 
 function DocView:get_tile_indexes(x, y)
   local h = self.tiles_metric.line_height * TILE_LINES
@@ -41,6 +42,48 @@ end
 
 function DocView:get_tile_size()
   return self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+end
+
+
+-- should be called only once for each tile at the beginning of the draw()
+-- function
+function DocView:prepare_tile(tile_id, x, y, w, h, background)
+  local surface = self.surface_from_list(self.named_surfaces, tile_id, x, y, w, h)
+  renderer.set_current_surface(surface)
+  renderer.begin_frame(surface, background)
+  self:set_surface_to_draw(surface)
+  self.used_tiles_ids[tile_id] = surface
+end
+
+
+-- We provide a surface to draw the content (document's text body) at the given tile
+-- coordinates. We ensure the surface has the background set since the beginning.
+function DocView:surface_for_content(tile_i, tile_j)
+  local surface = self.named_surfaces[compose_tile_id(tile_i, tile_j)]
+  renderer.set_current_surface(surface)
+end
+
+
+function DocView:surface_for_gutter(tile_j)
+  local surface = self.named_surfaces[compose_tile_id(tile_j)]
+  renderer.set_current_surface(surface)
+end
+
+
+function DocView:clear_unused_tiles()
+  for id in pairs(self.named_surfaces) do
+    if string.match(id, "^:") and not self.used_tiles_ids[id] then
+      self.named_surfaces[id] = nil
+    end
+  end
+end
+
+
+function DocView:setup_tiles_for_drawing()
+  self.tiles_metric.line_height  = self:get_line_height()
+  self.tiles_metric.char_width   = math.ceil(self:get_font():get_width(' '))
+  self.tiles_metric.gutter_width = self:get_gutter_width()
+  self.used_tiles_ids = { }
 end
 
 
@@ -93,55 +136,9 @@ function DocView:draw_line_content_rect(x, y, w, h, color)
 end
 
 
--- We provide a surface to draw the content (document's text body) at the given tile
--- coordinates. We ensure the surface has the background set since the beginning.
-function DocView:surface_for_content(tile_i, tile_j)
-  local x_o, y_o = self:get_content_body_offset()
-  local w, h = self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
-  local x, y = x_o + (tile_i - 1) * w, y_o + (tile_j - 1) * h
-
-  -- identify the list of surfaces for the column identified by tile_i
-  local column_surfaces = self.content_surfaces[tile_i]
-  if not column_surfaces then
-    column_surfaces = { }
-    self.content_surfaces[tile_i] = column_surfaces
-  end
-
-  local surface = self.surface_from_list(column_surfaces, tile_j, x, y, w, h)
-  -- FIXME: it can be expensive to generate this id string every time
-  local tile_id = string.format("c %d %d", tile_i, tile_j)
-  self:set_surface_to_draw(surface, tile_id, style.background)
-end
-
-
-function DocView:surface_for_gutter(tile_j)
-  local _, y_o = self:get_content_offset()
-  local x_o = common.round(self.position.x)
-  local w, h = self.tiles_metric.gutter_width, self.tiles_metric.line_height * TILE_LINES
-  local x, y = x_o, y_o + (tile_j - 1) * h
-  local surface = self.surface_from_list(self.gutter_surfaces, tile_j, x, y, w, h)
-  local tile_id = string.format("g %d", tile_j)
-  self:set_surface_to_draw(surface, tile_id, style.background)
-end
-
-
-function DocView:setup_tiles_for_drawing()
-  local new_lh = self:get_line_height()
-  local new_cw = math.ceil(self:get_font():get_width(' '))
-  local new_gw, gpad = self:get_gutter_width()
-  -- FIXME: include also the surface scale here
-
-  if new_lh ~= self.tiles_metric.line_height or new_cw ~= self.tiles_metric.char_width then
-    self.content_surfaces = { }
-    self.gutter_surfaces = { }
-  elseif new_gw ~= self.tiles_metric.gutter_width then
-    self.gutter_surfaces = { }
-  end
-  self.tiles_metric.line_height  = new_lh
-  self.tiles_metric.char_width   = new_cw
-  self.tiles_metric.gutter_width = new_gw
-
-  self.surface_to_draw = { }
+function DocView:get_content_body_offset()
+  local x, y = self:get_content_offset()
+  return x + self:get_gutter_width(), y + style.padding.y
 end
 
 
@@ -186,8 +183,7 @@ function DocView:new(doc)
   self.ime_status = false
   self.hovering_gutter = false
   self.tiles_metric = { line_height = 0, char_width = 0, gutter_width = 0 }
-  self.content_surfaces = { }
-  self.gutter_surfaces = { }
+  self.used_tiles_ids = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
   self.h_scrollbar:set_forced_status(config.force_scrollbar_status)
 end
@@ -706,6 +702,9 @@ function DocView:draw()
   local visible_minline, visible_maxline = self:get_visible_line_range()
   local lh = self.tiles_metric.line_height
 
+  local gw, gpad = self:get_gutter_width()
+  local x_o, y_o = self:get_content_body_offset()
+
   -- Compute minlines and maxlines rounded in a way to complete the corresponding
   -- tiles.
   -- Compute first min and max tile_i, j indexes corresponding to tiles visible
@@ -714,7 +713,7 @@ function DocView:draw()
   -- call.
   local min_tile_j = math.floor((visible_minline - 1) / TILE_LINES)
   local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES + 1)
-  local min_tile_i = self:get_tile_indexes(self.position.x, 0)
+  local min_tile_i = self:get_tile_indexes(self.position.x + gw, 0)
   local max_tile_i = self:get_tile_indexes(self.position.x + self.size.x, 0)
   local minline = math.max(1, min_tile_j * TILE_LINES + 1)
   local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
@@ -725,14 +724,17 @@ function DocView:draw()
   end
 
   -- Ensure surfaces visible on the screen are "presented" to be drawn
+  local tile_w, tile_h = self:get_tile_size()
   for tile_j = min_tile_j + 1, max_tile_j + 1 do
+    local y = y_o + (tile_j - 1) * tile_h
+    self:prepare_tile(compose_tile_id(tile_j), x_o - gw, y, gw, tile_h, style.background)
     for tile_i = min_tile_i, max_tile_i do
-      self:surface_for_content(tile_i, tile_j)
+      local x = x_o + (tile_i - 1) * tile_w
+      self:prepare_tile(compose_tile_id(tile_i, tile_j), x, y, tile_w, tile_h, style.background)
     end
   end
 
   local x, y = self:get_line_screen_position(minline)
-  local gw, gpad = self:get_gutter_width()
   for i = minline, maxline do
     y = y + (self:draw_line_gutter(i, self.position.x, y, gpad and gw - gpad or gw) or lh)
   end
@@ -749,6 +751,7 @@ function DocView:draw()
   core.pop_clip_rect()
 
   self:draw_scrollbar()
+  self:clear_unused_tiles()
   self:present_surfaces()
 end
 
