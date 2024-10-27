@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #ifdef _MSC_VER
   #ifndef alignof
@@ -364,3 +365,4 @@ void rencache_swap_buffers(RenCache* cache) {
   cache->command_buf_idx = 0;
 }
 
+#include "rencache-debug.c"
