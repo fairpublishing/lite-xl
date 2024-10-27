@@ -80,9 +80,11 @@ end
 
 
 function DocView:setup_tiles_for_drawing()
+  local gw, gpad = self:get_gutter_width()
   self.tiles_metric.line_height  = self:get_line_height()
-  self.tiles_metric.char_width   = math.ceil(self:get_font():get_width(' '))
-  self.tiles_metric.gutter_width = self:get_gutter_width()
+  self.tiles_metric.char_width = math.ceil(self:get_font():get_width(' '))
+  self.tiles_metric.gutter_width = gw
+  self.tiles_metric.gutter_padding = gpad
   self.used_tiles_ids = { }
 end
 
@@ -138,7 +140,7 @@ end
 
 function DocView:get_content_body_offset()
   local x, y = self:get_content_offset()
-  return x + self:get_gutter_width(), y + style.padding.y
+  return x + self.tiles_metric.gutter_width, y + style.padding.y
 end
 
 
@@ -182,7 +184,7 @@ function DocView:new(doc)
   self.ime_selection = { from = 0, size = 0 }
   self.ime_status = false
   self.hovering_gutter = false
-  self.tiles_metric = { line_height = 0, char_width = 0, gutter_width = 0 }
+  self.tiles_metric = { line_height = 0, char_width = 0, gutter_width = 0, gutter_padding = 0 }
   self.used_tiles_ids = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
   self.h_scrollbar:set_forced_status(config.force_scrollbar_status)
@@ -254,14 +256,14 @@ end
 
 
 function DocView:get_gutter_width()
-  local padding = style.padding.x * 2
-  return self:get_font():get_width(#self.doc.lines) + padding, padding
+  local padding = math.floor(style.padding.x * 2 + 0.5)
+  return math.ceil(self:get_font():get_width(#self.doc.lines)) + padding, padding
 end
 
 
 function DocView:get_line_screen_position(line, col)
   local x, y = self:get_content_body_offset()
-  local lh = self:get_line_height()
+  local lh = self.tiles_metric.line_height
   y = y + (line-1) * lh
   if col then
     return x + self:get_col_x_offset(line, col), y
@@ -272,9 +274,9 @@ end
 
 
 function DocView:get_line_text_y_offset()
-  local lh = self:get_line_height()
+  local lh = self.tiles_metric.line_height
   local th = self:get_font():get_height()
-  return (lh - th) / 2
+  return math.floor((lh - th) / 2 + 0.5)
 end
 
 
@@ -379,7 +381,7 @@ function DocView:scroll_to_make_visible(line, col)
   local lh = self:get_line_height()
   local _, _, _, scroll_h = self.h_scrollbar:get_track_rect()
   self.scroll.to.y = common.clamp(self.scroll.to.y, ly - oy - self.size.y + scroll_h + lh * 2, ly - oy - lh)
-  local gw = self:get_gutter_width()
+  local gw = self.tiles_metric.gutter_width
   local xoffset = self:get_col_x_offset(line, col)
   local xmargin = 3 * self:get_font():get_width(' ')
   local xsup = xoffset + gw + xmargin
@@ -397,7 +399,7 @@ function DocView:on_mouse_moved(x, y, ...)
   DocView.super.on_mouse_moved(self, x, y, ...)
 
   self.hovering_gutter = false
-  local gw = self:get_gutter_width()
+  local gw = self.tiles_metric.gutter_width
 
   if self:scrollbar_hovering() or self:scrollbar_dragging() then
     self.cursor = "arrow"
@@ -577,7 +579,7 @@ function DocView:draw_line_text(line, x, y)
     tx, is_off_screen_right = self:draw_line_content_text(font, text, tx, ty, color)
     if is_off_screen_right then break end
   end
-  return self:get_line_height()
+  return self.tiles_metric.line_height
 end
 
 function DocView:draw_caret(x, y)
@@ -702,7 +704,7 @@ function DocView:draw()
   local visible_minline, visible_maxline = self:get_visible_line_range()
   local lh = self.tiles_metric.line_height
 
-  local gw, gpad = self:get_gutter_width()
+  local gw, gpad = self.tiles_metric.gutter_width, self.tiles_metric.gutter_padding
   local x_o, y_o = self:get_content_body_offset()
 
   -- Compute minlines and maxlines rounded in a way to complete the corresponding
@@ -711,11 +713,11 @@ function DocView:draw()
   -- on the screen.
   -- TODO: computations befor for min/max tile can be done with a single function
   -- call.
-  local min_tile_j = math.floor((visible_minline - 1) / TILE_LINES)
-  local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES + 1)
+  local min_tile_j = math.floor((visible_minline - 1) / TILE_LINES) + 1
+  local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES) + 1
   local min_tile_i = self:get_tile_indexes(self.position.x + gw, 0)
   local max_tile_i = self:get_tile_indexes(self.position.x + self.size.x, 0)
-  local minline = math.max(1, min_tile_j * TILE_LINES + 1)
+  local minline = math.max(1, (min_tile_j - 1) * TILE_LINES + 1)
   local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
 
   if min_tile_j <= 1 then
@@ -725,7 +727,7 @@ function DocView:draw()
 
   -- Ensure surfaces visible on the screen are "presented" to be drawn
   local tile_w, tile_h = self:get_tile_size()
-  for tile_j = min_tile_j + 1, max_tile_j + 1 do
+  for tile_j = min_tile_j, max_tile_j do
     local y = y_o + (tile_j - 1) * tile_h
     self:prepare_tile(compose_tile_id(tile_j), x_o - gw, y, gw, tile_h, style.background)
     for tile_i = min_tile_i, max_tile_i do
