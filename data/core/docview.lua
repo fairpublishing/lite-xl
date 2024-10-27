@@ -654,10 +654,7 @@ function DocView:draw_ime_decoration(line1, col1, line2, col2)
   -- Draw IME underline
   local x1 = self:get_col_x_offset(line1, col1)
   local x2 = self:get_col_x_offset(line2, col2)
-  -- FIXME: we have a problem here: we need to allocate a surface to draw IME
-  --        stuff but I don't know how large it need to get.
-  -- local surface = self:surface_for("ime", ???)
-  renderer.draw_rect(x + math.min(x1, x2), y + lh - line_size, math.abs(x1 - x2), line_size, style.text)
+  renderer.render_fill_rect(x + math.min(x1, x2), y + lh - line_size, math.abs(x1 - x2), line_size, style.text)
 
   -- Draw IME selection
   local col = math.min(col1, col2)
@@ -667,7 +664,7 @@ function DocView:draw_ime_decoration(line1, col1, line2, col2)
   if from ~= to then
     x2 = self:get_col_x_offset(line1, to)
     line_size = style.caret_width
-    renderer.draw_rect(x + math.min(x1, x2), y + lh - line_size, math.abs(x1 - x2), line_size, style.caret)
+    renderer.render_fill_rect(x + math.min(x1, x2), y + lh - line_size, math.abs(x1 - x2), line_size, style.caret)
   end
   self:draw_caret(x + x1, y)
 end
@@ -681,8 +678,7 @@ function DocView:draw_overlay()
     for _, line1, col1, line2, col2 in self.doc:get_selections() do
       if line1 >= minline and line1 <= maxline
       and system.window_has_focus() then
-        -- FIXME: bring back IME decorations
-        if false and ime.editing then
+        if ime.editing then
           self:draw_ime_decoration(line1, col1, line2, col2)
         else
           if config.disable_blink
