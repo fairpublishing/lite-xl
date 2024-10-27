@@ -11,6 +11,9 @@ static int RENDERER_FONT_REF = LUA_NOREF;
 // a reference to the current RenSurface
 static int CURRENT_SURFACE_REF = LUA_NOREF;
 
+extern void rencache_debug_log_frame(RenCache* cache);
+extern void rencache_debug_init(const char* log_path);
+
 RenSurface *current_surface = NULL;
 
 static RenSurface* get_current_surface(lua_State *L) {
@@ -389,6 +392,12 @@ static int f_draw_text(lua_State *L) {
   return 1;
 }
 
+static int f_debug_log_frame(lua_State *L) {
+    RenSurface *rs = check_rensurface(L, 1);
+    rencache_debug_log_frame(&rs->rencache);
+    return 0;
+}
+
 static int f_present_surface(lua_State *L) {
   RenSurface *rs = check_rensurface(L, 1);
   int x = rs->rencache.x_origin, y = rs->rencache.y_origin;
@@ -444,6 +453,7 @@ static int f_set_render_clip_rect(lua_State *L) {
 
 static const luaL_Reg lib[] = {
   { "show_debug",           f_show_debug           },
+  { "debug_log_frame",      f_debug_log_frame      },
   { "get_size",             f_get_size             },
   { "begin_frame",          f_begin_frame          },
   { "clear_font_refs",      f_clear_font_refs      },
@@ -543,6 +553,8 @@ static const luaL_Reg libRenSurface[] = {
 };
 
 int luaopen_renderer(lua_State *L) {
+  rencache_debug_init("rencache_debug.log");
+
   // gets a reference on the registry to store font data
   lua_newtable(L);
   RENDERER_FONT_REF = luaL_ref(L, LUA_REGISTRYINDEX);
