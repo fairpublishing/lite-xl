@@ -6,6 +6,7 @@ local config = require "core.config"
 local keymap = require "core.keymap"
 local style = require "core.style"
 local View = require "core.view"
+local TiledView = require "core.tiledview"
 local ContextMenu = require "core.contextmenu"
 local RootView = require "core.rootview"
 local CommandView = require "core.commandview"
@@ -37,7 +38,7 @@ local function replace_alpha(color, alpha)
 end
 
 
-local TreeView = View:extend()
+local TreeView = TiledView:extend()
 
 function TreeView:new()
   TreeView.super.new(self)
@@ -309,13 +310,13 @@ end
 
 function TreeView:draw_item_text(item, active, hovered, x, y, w, h)
   local item_text, item_font, item_color = self:get_item_text(item, active, hovered)
-  common.draw_text(item_font, item_color, item_text, nil, x, y, 0, h)
+  self:draw_justified_text(item_font, item_color, item_text, nil, x, y, 0, h)
 end
 
 
 function TreeView:draw_item_icon(item, active, hovered, x, y, w, h)
   local icon_char, icon_font, icon_color = self:get_item_icon(item, active, hovered)
-  common.draw_text(icon_font, icon_color, icon_char, nil, x, y, 0, h)
+  self:draw_justified_text(icon_font, icon_color, icon_char, nil, x, y, 0, h)
   return self.item_icon_width + self.item_text_spacing
 end
 
@@ -330,7 +331,7 @@ function TreeView:draw_item_chevron(item, active, hovered, x, y, w, h)
   if item.type == "dir" then
     local chevron_icon = item.expanded and "-" or "+"
     local chevron_color = hovered and style.accent or style.text
-    common.draw_text(style.icon_font, chevron_color, chevron_icon, nil, x, y, 0, h)
+    self:draw_justified_text(style.icon_font, chevron_color, chevron_icon, nil, x, y, 0, h)
   end
   return style.padding.x
 end
@@ -340,9 +341,9 @@ function TreeView:draw_item_background(item, active, hovered, x, y, w, h)
   if hovered then
     local hover_color = { table.unpack(style.line_highlight) }
     hover_color[4] = 160
-    renderer.draw_rect(x, y, w, h, hover_color)
+    self:draw_rect(x, y, w, h, hover_color)
   elseif active then
-    renderer.draw_rect(x, y, w, h, style.line_highlight)
+    self:draw_rect(x, y, w, h, style.line_highlight)
   end
 end
 
@@ -357,23 +358,17 @@ function TreeView:draw_item(item, active, hovered, x, y, w, h)
 end
 
 
-function TreeView:compute_required_width()
-  return math.ceil(self.size.x / surface_base_width) * surface_base_width
-end
-
-
 function TreeView:draw()
   if not self.visible then return end
-  local _x, _y = self.position.x, self.position.y
-  local _w, _h = self:compute_required_width(), self.size.y
 
   local doc = core.active_view.doc
   local active_filename = doc and system.absolute_path(doc.filename or "")
 
-  self:set_surface_for("treeview", _x, _y, _w, _h, style.background2)
+  self:setup_tiles_for_drawing()
+  local x1, y1, x2, y2 = self:activate_tiles_for_region(self.position.x, self.position.y, self.position.x + self.size.x, self.position.y + self.size.y, style.background)
 
   for item, x,y,w,h in self:each_item() do
-    if y + h >= _y and y < _y + _h then
+    if y + h >= y1 and y < y2 then
       self:draw_item(item,
         item == self.selected_item,
         item == self.hovered_item,
