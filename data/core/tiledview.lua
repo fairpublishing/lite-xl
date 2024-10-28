@@ -15,7 +15,6 @@ function TiledView:new()
   TiledView.super.new(self)
   self.tiles_metric = { w = 0, h = 0 }
   self.used_tiles_ids = { }
-  self.active_tiles = { }
 end
 
 
