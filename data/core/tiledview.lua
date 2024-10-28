@@ -20,9 +20,6 @@ end
 
 function TiledView:present_surfaces()
   self:clear_unused_tiles()
-  if self.named_surfaces[":1 1"] then
-    renderer.debug_log_frame(self.named_surfaces[":1 1"])
-  end
   TiledView.super.present_surfaces(self)
 end
 
@@ -47,7 +44,6 @@ function TiledView:prepare_tile(tile_id, x, y, w, h, background)
   renderer.begin_frame(surface, background)
   self:set_surface_to_draw(surface)
   self.used_tiles_ids[tile_id] = surface
-  renderer.show_debug(surface, true)
 end
 
 
