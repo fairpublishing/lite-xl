@@ -31,13 +31,12 @@ function TiledView:get_tile_indexes(x, y)
 end
 
 
-function TiledView:get_tile_size()
-  return self.tiles_metric.w, self.tiles_metric.h
-end
-
-
 -- should be called only once for each tile at the beginning of the draw()
--- function
+-- function.
+-- Retrieve the extisting surface from the previous frame or create a new one.
+-- Draw the background of the surface.
+-- Set the surface to be renderer when present_surfaces() is called.
+-- Mark the tile as used.
 function TiledView:prepare_tile(tile_id, x, y, w, h, background)
   local surface = self.surface_from_list(self.named_surfaces, tile_id, x, y, w, h)
   renderer.set_current_surface(surface)
@@ -47,14 +46,8 @@ function TiledView:prepare_tile(tile_id, x, y, w, h, background)
 end
 
 
--- We provide a surface to draw the content (document's text body) at the given tile
--- coordinates. We ensure the surface has the background set since the beginning.
-function TiledView:surface_for_tile(tile_i, tile_j)
-  local surface = self.named_surfaces[compose_tile_id(tile_i, tile_j)]
-  renderer.set_current_surface(surface)
-end
-
-
+-- We remove from named_surfaces the tile surfaces no longer in view
+-- so that the garbage collector can dispose of them.
 function TiledView:clear_unused_tiles()
   for id in pairs(self.named_surfaces) do
     if string.match(id, "^:") and not self.used_tiles_ids[id] then
@@ -64,6 +57,7 @@ function TiledView:clear_unused_tiles()
 end
 
 
+-- compute the tiles metric and clear the used tiles list
 function TiledView:setup_tiles_for_drawing()
   local metric = self.tiles_metric
   metric.x, metric.y = self:get_content_offset()
@@ -72,6 +66,7 @@ function TiledView:setup_tiles_for_drawing()
 end
 
 
+-- activate/prepare the tiles needed to cover the given region
 function TiledView:activate_tiles_for_region(x1, y1, x2, y2, background)
   local xo, yo = self.tiles_metric.x, self.tiles_metric.y
   local w, h = self.tiles_metric.w, self.tiles_metric.h
