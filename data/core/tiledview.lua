@@ -100,8 +100,8 @@ end
 
 
 function TiledView:draw_text(font, text, x, y, color)
-  local i, j = self:get_tile_indexes(x, y)
-  local surface = self.named_surfaces[compose_tile_id(i, j)]
+  local i1, j1 = self:get_tile_indexes(x, y)
+  local surface = self.named_surfaces[compose_tile_id(i1, j1)]
   local xp, yp = 0, y + font:get_height()
   if surface then
     renderer.set_current_surface(surface)
@@ -109,11 +109,20 @@ function TiledView:draw_text(font, text, x, y, color)
   else
     xp = x + font:get_width(text)
   end
-  local ip, jp = self:get_tile_indexes(xp, yp)
-  for jr = j, jp do
-    for ir = i, ip do
-      if ir > i or jr > j then
-        surface = self.named_surfaces[compose_tile_id(ir, jr)]
+  -- compute the indexes of the tile that contains the lower-right
+  -- corner (xp, yp) of the element
+  local i2, j2 = self:get_tile_indexes(xp, yp)
+  -- if i2 > i1 or j2 > 11 we need to draw the element in a matrix of
+  -- surfaces from (i1, j1) to (i2, j2) but the drawing in (i1, j1) is
+  -- already done.
+  -- In the more likely case i2 = i1 and j2 = j1 i.e. the element does
+  -- not cross the boundaries of the surface where its upper-left corner
+  -- is located and the loop before should not do anything.
+  -- Draw the element in the other surfaces the element overflows to.
+  for j = j1, j2 do
+    for i = i1, i2 do
+      if i > i1 or j > j1 then
+        surface = self.named_surfaces[compose_tile_id(i, j)]
         if surface then
           renderer.set_current_surface(surface)
           renderer.draw_text(font, text, x, y, color)
@@ -138,18 +147,24 @@ end
 
 
 function TiledView:draw_rect(x, y, w, h, color)
-  local i, j = self:get_tile_indexes(x, y)
-  local surface = self.named_surfaces[compose_tile_id(i, j)]
-  if surface then
-    renderer.set_current_surface(surface)
-    renderer.draw_rect(x, y, w, h, color)
-  end
-  local ip = self:get_tile_indexes(x + w, y)
-  for ir = i + 1, ip do
-    surface = self.named_surfaces[compose_tile_id(ir, j)]
-    if surface then
-      renderer.set_current_surface(surface)
-      renderer.draw_rect(x, y, w, h, color)
+  local xp, yp = x + w, y + h
+  local i1, j1 = self:get_tile_indexes(x, y)
+  -- compute the indexes of the tile that contains the lower-right
+  -- corner (xp, yp) of the element
+  local i2, j2 = self:get_tile_indexes(xp, yp)
+  -- if i2 > i1 or j2 > j1 we need to draw the element in a matrix of
+  -- surfaces from (i1, j1) to (i2, j2).
+  -- In the more likely case i2 = i1 and j2 = j1 i.e. the element does
+  -- not cross the boundaries of the surface where its upper-left corner
+  -- is located and the loop before should not do anything.
+  -- Draw the element in the other surfaces the element overflows to.
+  for j = j1, j2 do
+    for i = i1, i2 do
+      local surface = self.named_surfaces[compose_tile_id(i, j)]
+      if surface then
+        renderer.set_current_surface(surface)
+        renderer.draw_rect(x, y, w, h)
+      end
     end
   end
 end
