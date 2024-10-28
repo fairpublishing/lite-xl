@@ -21,7 +21,11 @@ static void log_timestamp(void) {
     time_t now;
     char timestamp[26];
     time(&now);
+#ifdef _WIN32
+    ctime_s(timestamp, sizeof(timestamp), &now);
+#else
     ctime_r(&now, timestamp);
+#endif
     timestamp[24] = '\0';  // Remove newline
     fprintf(debug_log_file, "[%s] ", timestamp);
 }
