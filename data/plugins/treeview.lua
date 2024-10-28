@@ -365,7 +365,7 @@ function TreeView:draw()
   local active_filename = doc and system.absolute_path(doc.filename or "")
 
   self:setup_tiles_for_drawing()
-  local x1, y1, x2, y2 = self:activate_tiles_for_region(self.position.x, self.position.y, self.position.x + self.size.x, self.position.y + self.size.y, style.background)
+  local x1, y1, x2, y2 = self:activate_tiles(style.background)
 
   for item, x,y,w,h in self:each_item() do
     if y + h >= y1 and y < y2 then

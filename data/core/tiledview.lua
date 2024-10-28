@@ -61,7 +61,7 @@ end
 function TiledView:setup_tiles_for_drawing()
   local metric = self.tiles_metric
   metric.x, metric.y = self:get_content_offset()
-  metric.w, metric.h = 400, 600
+  metric.w, metric.h = self.tiles_width or 400, self.tiles_height or 600
   self.used_tiles_ids = { }
 end
 
@@ -86,6 +86,12 @@ function TiledView:activate_tiles_for_region(x1, y1, x2, y2, background)
   end
 
   return xo + (min_i -1) * w, yo + (min_j - 1) * h, xo + max_i * w, yo + max_j * h
+end
+
+
+function TiledView:activate_tiles(background)
+  local x, y = self.position.x, self.position.y
+  return self:activate_tiles_for_region(x, y, x + self.size.x, y + self.size.y, background)
 end
 
 
@@ -153,7 +159,7 @@ function TiledView:draw_rect(x, y, w, h, color)
       local surface = self.named_surfaces[compose_tile_id(i, j)]
       if surface then
         renderer.set_current_surface(surface)
-        renderer.draw_rect(x, y, w, h)
+        renderer.draw_rect(x, y, w, h, color)
       end
     end
   end
