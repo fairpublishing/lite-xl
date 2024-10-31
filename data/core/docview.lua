@@ -289,6 +289,13 @@ function DocView:get_x_offset_col(line, x)
 end
 
 
+function DocView:resolve_line(y)
+  local yo = self.tiles_metric.y
+  local line = math.floor((y - yo) / self.tiles_metric.line_height) + 1
+  return common.clamp(line, 1, #self.doc.lines)
+end
+
+
 function DocView:resolve_screen_position(x, y)
   local ox, oy = self:get_line_screen_position(1)
   local line = math.floor((y - oy) / self.tiles_metric.line_height) + 1
@@ -633,37 +640,25 @@ end
 
 function DocView:draw()
   self:setup_tiles_for_drawing()
+
   local _, indent_size = self.doc:get_indent_info()
   self:get_font():set_tab_size(indent_size)
 
-  local visible_minline, visible_maxline = self:get_visible_line_range()
   local lh = self.tiles_metric.line_height
-
   local gw, gpad = self.tiles_metric.gutter_width, self.tiles_metric.gutter_padding
   local xo, yo = self.tiles_metric.x, self.tiles_metric.y
-
-  -- Compute minlines and maxlines rounded in a way to complete the corresponding
-  -- tiles.
-  -- Compute first min and max tile_i, j indexes corresponding to tiles visible
-  -- on the screen.
-  -- TODO: computations befor for min/max tile can be done with a single function
-  -- call.
-  local min_tile_j = math.floor((visible_minline - 1) / TILE_LINES) + 1
-  local max_tile_j = math.floor((visible_maxline - 1) / TILE_LINES) + 1
-  local min_tile_i = self:get_tile_indexes(self.position.x + gw, 0)
-  local max_tile_i = self:get_tile_indexes(self.position.x + self.size.x, 0)
-  local minline = math.max(1, (min_tile_j - 1) * TILE_LINES + 1)
-  local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
-
-  if min_tile_j <= 1 then
-    local xb, yb = self:get_content_offset()
-    self:set_surface_for("ypad", xb, yb, self.size.x, style.padding.y, style.background)
-  end
 
   local pos = self.position
   local sx, sy = self.size.x, self.size.y
   self:activate_gutter_tiles_for_region(pos.y + style.padding.y, pos.y + sy, style.background)
   local x1, y1, x2, y2 = self:activate_tiles_for_region(pos.x + gw, pos.y + style.padding.y, pos.x + sx, pos.y + sy, style.background)
+
+  if y1 > pos.y then
+    local xb, yb = self:get_content_offset()
+    self:set_surface_for("ypad", xb, yb, self.size.x, style.padding.y, style.background)
+  end
+
+  local minline, maxline = self:resolve_line(y1), self:resolve_line(y2) - 1
 
   local limits = self.tiles_metric.limits
   limits.x1, limits.y1, limits.x2, limits.y2 = x1, y1, x2, y2
