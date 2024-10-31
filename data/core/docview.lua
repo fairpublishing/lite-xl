@@ -33,15 +33,14 @@ end
 
 
 function DocView:get_tile_indexes(x, y)
-  local h = self.tiles_metric.line_height * TILE_LINES
-  local w = self.tiles_metric.char_width * TILE_CHARACTERS
-  local x_o, y_o = self:get_content_body_offset()
-  return math.floor((x - x_o) / w) + 1, math.floor((y - y_o) / h) + 1
+  local xo, yo = self.tiles_metric.x, self.tiles_metric.y
+  local w,  h  = self.tiles_metric.w, self.tiles_metric.h
+  return math.floor((x - xo) / w) + 1, math.floor((y - yo) / h) + 1
 end
 
 
 function DocView:get_tile_size()
-  return self.tiles_metric.char_width * TILE_CHARACTERS, self.tiles_metric.line_height * TILE_LINES
+  return self.tiles_metric.w, self.tiles_metric.h
 end
 
 
@@ -80,25 +79,28 @@ end
 
 
 function DocView:setup_tiles_for_drawing()
-  local gw, gpad = self:get_gutter_width()
-  self.tiles_metric.line_height  = self:get_line_height()
-  self.tiles_metric.char_width = math.ceil(self:get_font():get_width(' '))
-  self.tiles_metric.gutter_width = gw
-  self.tiles_metric.gutter_padding = gpad
+  local lh = self:get_line_height()
+  local cw = math.ceil(self:get_font():get_width(' '))
+  local metric = self.tiles_metric
+  metric.gutter_width, metric.gutter_padding = self:get_gutter_width()
+  metric.line_height = lh
+  -- Note that get_content_body_offset need metric.gutter_width to be set
+  metric.x, metric.y = self:get_content_body_offset()
+  metric.w, metric.h = cw * TILE_CHARACTERS, lh * TILE_LINES
   self.used_tiles_ids = { }
 end
 
 
 -- return true if text is too far-off in a tile on the right
 function DocView:draw_line_content_text(font, text, x, y, color)
-  local x_o, y_o = self:get_content_body_offset()
+  local xo, yo = self.tiles_metric.x, self.tiles_metric.y
   local tile_w, tile_h = self:get_tile_size()
   local tile_i, tile_j = self:get_tile_indexes(x, y)
 
   if tile_j < 1 then return x, false end
 
   -- compute x_tile as the x coordinate of the left border of the tile
-  local x_tile = x_o + tile_w * (tile_i - 1)
+  local x_tile = xo + tile_w * (tile_i - 1)
   local x_rlimit = self.position.x + self.size.x
 
   local x_text_end
@@ -119,12 +121,12 @@ end
 
 
 function DocView:draw_line_content_rect(x, y, w, h, color)
-  local x_o, y_o = self:get_content_body_offset()
+  local xo, yo = self.tiles_metric.x, self.tiles_metric.y
   local tile_w, tile_h = self:get_tile_size()
   local tile_i, tile_j = self:get_tile_indexes(x, y)
 
   -- compute x_tile_s as the x coordinate of the left border of the tile
-  local x_tile = x_o + tile_w * (tile_i - 1)
+  local x_tile = xo + tile_w * (tile_i - 1)
 
   while x_tile < self.position.x + self.size.x and x_tile < x + w do
     if x_tile + tile_w > self.position.x then
@@ -184,7 +186,7 @@ function DocView:new(doc)
   self.ime_selection = { from = 0, size = 0 }
   self.ime_status = false
   self.hovering_gutter = false
-  self.tiles_metric = { line_height = 0, char_width = 0, gutter_width = 0, gutter_padding = 0 }
+  self.tiles_metric = { x = 0, y = 0, w = 0, h = 0, line_height = 0, gutter_width = 0, gutter_padding = 0 }
   self.used_tiles_ids = { }
   self.v_scrollbar:set_forced_status(config.force_scrollbar_status)
   self.h_scrollbar:set_forced_status(config.force_scrollbar_status)
@@ -262,7 +264,7 @@ end
 
 
 function DocView:get_line_screen_position(line, col)
-  local x, y = self:get_content_body_offset()
+  local x, y = self.tiles_metric.x, self.tiles_metric.y
   local lh = self.tiles_metric.line_height
   y = y + (line-1) * lh
   if col then
@@ -553,7 +555,7 @@ end
 function DocView:draw_line_highlight(y)
   local gw = self.tiles_metric.gutter_width
   local tile_w = self:get_tile_size()
-  local x = self:get_content_body_offset()
+  local x = self.tiles_metric.x
   local w = math.ceil((self.scroll.x + self.size.x - gw) / tile_w) * tile_w
   local h = self.tiles_metric.line_height
   self:draw_line_content_rect(x, y, w, h, style.line_highlight)
@@ -701,7 +703,7 @@ function DocView:draw()
   local lh = self.tiles_metric.line_height
 
   local gw, gpad = self.tiles_metric.gutter_width, self.tiles_metric.gutter_padding
-  local x_o, y_o = self:get_content_body_offset()
+  local xo, yo = self.tiles_metric.x, self.tiles_metric.y
 
   -- Compute minlines and maxlines rounded in a way to complete the corresponding
   -- tiles.
@@ -717,17 +719,17 @@ function DocView:draw()
   local maxline = math.min(#self.doc.lines, max_tile_j * TILE_LINES)
 
   if min_tile_j <= 1 then
-    local x_o, y_o = self:get_content_offset()
-    self:set_surface_for("ypad", x_o, y_o, self.size.x, style.padding.y, style.background)
+    local xb, yb = self:get_content_offset()
+    self:set_surface_for("ypad", xb, yb, self.size.x, style.padding.y, style.background)
   end
 
   -- Ensure surfaces visible on the screen are "presented" to be drawn
   local tile_w, tile_h = self:get_tile_size()
   for tile_j = min_tile_j, max_tile_j do
-    local y = y_o + (tile_j - 1) * tile_h
-    self:prepare_tile(compose_tile_id(tile_j), x_o - gw, y, gw, tile_h, style.background)
+    local y = yo + (tile_j - 1) * tile_h
+    self:prepare_tile(compose_tile_id(tile_j), xo - gw, y, gw, tile_h, style.background)
     for tile_i = min_tile_i, max_tile_i do
-      local x = x_o + (tile_i - 1) * tile_w
+      local x = xo + (tile_i - 1) * tile_w
       self:prepare_tile(compose_tile_id(tile_i, tile_j), x, y, tile_w, tile_h, style.background)
     end
   end
