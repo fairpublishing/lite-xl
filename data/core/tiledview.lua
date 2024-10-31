@@ -76,7 +76,7 @@ function TiledView:activate_tiles_for_region(x1, y1, x2, y2, background)
   local max_i, max_j = math.floor((x2 - xo) / w) + 1, math.floor((y2 - yo) / h) + 1
 
   -- prepare the tiles for drawing
-  for i = min_i, max_j do
+  for i = min_i, max_i do
     local x = xo + (i - 1) * w
     for j = min_j, max_j do
       local y = yo + (j - 1) * h
