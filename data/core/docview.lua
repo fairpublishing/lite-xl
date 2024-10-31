@@ -639,12 +639,14 @@ function DocView:draw_line_gutter(line, x, y, width)
       break
     end
   end
+  local font = self:get_font()
   x = x + style.padding.x
-  local lh = self.tiles_metric.line_height
+  y = y + self:get_line_text_y_offset()
+  local tw = font:get_width(line)
   local _, tile_j = self:get_tile_indexes(x, y)
   self:surface_for_gutter(tile_j)
-  common.draw_text(self:get_font(), color, line, "right", x, y, width, lh)
-  return lh
+  renderer.draw_text(font, line, x + (width - tw), y, color)
+  return self.tiles_metric.line_height
 end
 
 
@@ -734,12 +736,13 @@ function DocView:draw()
     end
   end
 
-  local x, y = self:get_line_screen_position(minline)
+  local pos = self.position
+  local _, y = self:get_line_screen_position(minline)
+  local x = math.floor(pos.x + 0.5)
   for i = minline, maxline do
-    y = y + (self:draw_line_gutter(i, self.position.x, y, gpad and gw - gpad or gw) or lh)
+    y = y + (self:draw_line_gutter(i, x, y, gpad and gw - gpad or gw) or lh)
   end
 
-  local pos = self.position
   x, y = self:get_line_screen_position(minline)
   -- the clip below ensure we don't write on the gutter region. On the
   -- right side it is redundant with the Node's clip.
