@@ -12,6 +12,11 @@ lite_sources = [
     'main.c',
 ]
 
+# Add debug render logging source
+debug_lite_sources = [
+  'debug-render-log.c'
+]
+
 # dirmonitor backend
 if get_option('dirmonitor_backend') == ''
     if cc.has_function('inotify_init', prefix : '#include<sys/inotify.h>')
@@ -59,7 +64,7 @@ endif
 lite_includes += include_directories('.')
 
 executable('lite-xl',
-    lite_sources + lite_rc,
+    lite_sources + debug_lite_sources + lite_rc,
     include_directories: lite_includes,
     dependencies: lite_deps,
     c_args: lite_cargs,

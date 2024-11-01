@@ -1,5 +1,5 @@
 int save_surface_to_png(SDL_Surface* surface, const char* filename) {
-    if (IMG_SavePNG(surface, filename) != 0) {
+    if (surface && IMG_SavePNG(surface, filename) != 0) {
         // Handle error
         SDL_Log("Failed to save PNG: %s", SDL_GetError());
         return -1;
