@@ -5,6 +5,7 @@
 #include "../renwindow.h"
 #include "lua.h"
 #include "debug-image-save.h"
+#include "../debug-render-log.h"
 
 // a reference index to a table that stores the fonts
 static int RENDERER_FONT_REF = LUA_NOREF;
@@ -401,9 +402,13 @@ static int f_debug_log_frame(lua_State *L) {
 static int f_present_surface(lua_State *L) {
   RenSurface *rs = check_rensurface(L, 1);
   int x = rs->rencache.x_origin, y = rs->rencache.y_origin;
+
   rencache_end_frame(&rs->rencache, rs);
   rencache_update_rects(&rs->rencache, rs);
   rencache_swap_buffers(&rs->rencache);
+
+  debug_render_log_surface(rs, x, y);
+
   renwin_render_surface(&window_renderer, rs, x, y);
   return 0;
 }
@@ -411,6 +416,7 @@ static int f_present_surface(lua_State *L) {
 
 static int f_present_window(lua_State *L) {
   renwin_present(&window_renderer);
+  debug_render_log_frame();
   return 0;
 }
 
@@ -431,6 +437,8 @@ static int f_render_fill_rect(lua_State *L) {
 
   SDL_Rect rect = {(int)x, (int)y, (int)w, (int)h};
   SDL_Color sdl_color = {color.r, color.g, color.b, color.a};
+
+  debug_render_log_rect(&rect, sdl_color);
   renwin_render_fill_rect(&window_renderer, &rect, sdl_color);
 
   return 0;
@@ -554,6 +562,7 @@ static const luaL_Reg libRenSurface[] = {
 
 int luaopen_renderer(lua_State *L) {
   rencache_debug_init("rencache_debug.log");
+  debug_render_log_init("debug_renders");
 
   // gets a reference on the registry to store font data
   lua_newtable(L);
