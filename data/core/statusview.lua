@@ -6,9 +6,10 @@ local style = require "core.style"
 local DocView = require "core.docview"
 local CommandView = require "core.commandview"
 local LogView = require "core.logview"
-local View = require "core.view"
 local Object = require "core.object"
+local TiledView = require "core.tiledview"
 
+local StatusView = TiledView:extend()
 
 StatusView.separator  = "      "
 StatusView.separator2 = "   |   "
@@ -86,6 +87,8 @@ function StatusView:new()
   self.hovered_panel = ""
   self.hide_messages = false
   self.visible = true
+  self.tiles_height = 0
+  self.tiles_width = 800
 
   self:register_docview_items()
   self:register_command_items()
@@ -444,13 +447,14 @@ function StatusView:draw_items(items, right_align, xoffset, yoffset)
   local x, y = self:get_content_offset()
   x = x + (xoffset or 0)
   y = y + (yoffset or 0)
+  local draw_justified_text = function(...) return self:draw_justified_text(...) end
   if right_align then
     local w = draw_items(self, items, 0, 0, text_width)
     x = x + self.size.x - w - style.padding.x
-    draw_items(self, items, x, y, common.draw_text)
+    draw_items(self, items, x, y, draw_justified_text)
   else
     x = x + style.padding.x
-    draw_items(self, items, x, y, common.draw_text)
+    draw_items(self, items, x, y, draw_justified_text)
   end
 end
 
@@ -468,13 +472,10 @@ function StatusView:draw_item_tooltip(item)
       x = self.size.x - w - (style.padding.x * 3)
     end
 
-    renderer.draw_rect(
-      x + style.padding.x,
-      self.position.y - h - (style.padding.y * 2),
-      w + (style.padding.x * 2),
-      h + (style.padding.y * 2),
-      style.background3
-    )
+    local bx, by = x + style.padding.x, self.position.y - h - (style.padding.y * 2)
+    local bw, bh = w + (style.padding.x * 2), h + (style.padding.y * 2)
+
+    self:set_surface_for("tooltip", bx, by, bw, bh, style.background3)
 
     renderer.draw_text(
       style.font,
@@ -893,6 +894,11 @@ function StatusView:on_mouse_wheel(y, x)
 end
 
 
+function StatusView:get_height()
+  return style.font:get_height() + style.padding.y * 2;
+end
+
+
 function StatusView:update()
   if not self.visible and self.size.y <= 0 then
     return
@@ -901,7 +907,8 @@ function StatusView:update()
     return
   end
 
-  local height = style.font:get_height() + style.padding.y * 2;
+  local height = self:get_height();
+  self.tiles_height = height
 
   if self.size.y + 1 < height then
     self:move_towards(self.size, "y", height, nil, "statusbar")
@@ -935,7 +942,8 @@ end
 function StatusView:draw()
   if not self.visible and self.size.y <= 0 then return end
 
-  self:set_surface_for("statusbar", self.position.x, self.position.y, self.size.x, self.size.y, style.background2)
+  self:setup_tiles_for_drawing()
+  self:activate_tiles(style.background2)
 
   if self.message and system.get_time() <= self.message_timeout then
     self:draw_items(self.message, false, 0, self.size.y)
@@ -954,7 +962,7 @@ function StatusView:draw()
         local hovered, item_bg = get_item_bg_color(self, item)
         if item.alignment == StatusView.Item.LEFT and not self.tooltip_mode then
           if type(item_bg) == "table" then
-            renderer.draw_rect(
+            self:draw_rect(
               item_x, self.position.y,
               item.w, self.size.y, item_bg
             )
@@ -980,7 +988,7 @@ function StatusView:draw()
         local hovered, item_bg = get_item_bg_color(self, item)
         if item.alignment == StatusView.Item.RIGHT then
           if type(item_bg) == "table" then
-            renderer.draw_rect(
+            self:draw_rect(
               item_x, self.position.y,
               item.w, self.size.y, item_bg
             )
