@@ -129,6 +129,7 @@ end
 
 
 function TitleView:draw()
+  if self.size.y == 0 then return end
   self:set_surface_for("title", self.position.x, self.position.y, self.size.x, self.size.y, style.background2)
   self:draw_window_title()
   self:draw_window_controls()

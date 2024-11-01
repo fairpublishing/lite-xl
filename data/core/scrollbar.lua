@@ -338,6 +338,7 @@ end
 ---Draw both the scrollbar track and thumb
 function Scrollbar:draw()
   local x, y, w, h = self:get_track_rect()
+  if w == 0 or h == 0 then return end
   self.view:set_surface_for(self.generic_name, x, y, w, h)
   self:draw_track()
   self:draw_thumb()
