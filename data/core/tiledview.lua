@@ -72,8 +72,8 @@ function TiledView:activate_tiles_for_region(x1, y1, x2, y2, background)
   local w, h = self.tiles_metric.w, self.tiles_metric.h
 
   -- compute min/max indexes of tiles needed to cover the region (x1, y1, x2, y2)
-  local min_i, min_j = math.floor((x1 - xo) / w) + 1, math.floor((y1 - yo) / h) + 1
-  local max_i, max_j = math.floor((x2 - xo) / w) + 1, math.floor((y2 - yo) / h) + 1
+  local min_i, max_i = math.floor((x1 - xo) / w) + 1, math.floor((x2 - 1 - xo) / w) + 1
+  local min_j, max_j = math.floor((y1 - yo) / h) + 1, math.floor((y2 - 1 - yo) / h) + 1
 
   -- prepare the tiles for drawing
   for i = min_i, max_i do

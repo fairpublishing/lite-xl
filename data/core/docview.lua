@@ -57,7 +57,7 @@ end
 function DocView:activate_gutter_tiles_for_region(y1, y2, background)
   local x, y = self:get_gutter_content_offset()
   local w, h = self.tiles_metric.gutter_width, self.tiles_metric.h
-  local j1, j2 = math.floor((y1 - y) / h) + 1, math.floor((y2 - y) / h) + 1
+  local j1, j2 = math.floor((y1 - y) / h) + 1, math.floor((y2 - 1 - y) / h) + 1
   for j = j1, j2 do
     self:prepare_tile(gutter_tile_id(j), x, y + (j - 1) * h, w, h, background)
   end
