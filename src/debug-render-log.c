@@ -19,8 +19,10 @@ static void write_html_header(FILE* f) {
     fprintf(f, ".event { margin: 5px 0; padding: 5px; background: #f8f8f8; border-left: 3px solid #ddd; }\n");
     fprintf(f, ".surface { border-left-color: #4CAF50; }\n");
     fprintf(f, ".zerosurf { border-left-color: #AF504C; }\n");
-    fprintf(f, ".rect { border-left-color: #2196F3; }\n");
+    fprintf(f, ".rect { border-left-color: #2196F3; display: flex; align-items: center; }\n");
+    fprintf(f, ".line { border-left-color: #9C27B0; }\n");
     fprintf(f, ".frame { background: white; padding: 15px; border-radius: 5px; margin: 10px 0; }\n");
+    fprintf(f, ".color-box { width: 20px; height: 20px; margin-right: 10px; border: 1px solid #ddd; }\n");
     fprintf(f, ".surface-image { max-width: 100%%; border: 1px solid #ddd; margin: 5px 0; }\n");
     fprintf(f, "</style>\n</head>\n<body>\n");
     fprintf(f, "<div class=\"frame\">\n");
@@ -76,9 +78,16 @@ void debug_render_log_surface(RenSurface *rs, int x, int y) {
 void debug_render_log_rect(SDL_Rect *r, SDL_Color color) {
     if (!current_frame_file) return;
 
-    fprintf(current_frame_file, "<div class=\"event rect\">");
-    fprintf(current_frame_file, "Rectangle at (%d,%d,%d,%d) color(%d,%d,%d,%d)",
-            r->x, r->y, r->w, r->h, color.r, color.g, color.b, color.a);
+    const char* shape_type = (r->w == 1 || r->h == 1) ? "line" : "rect";
+    const char* shape_desc = (r->w == 1) ? "Vertical line" :
+                            (r->h == 1) ? "Horizontal line" :
+                            "Rectangle";
+
+    fprintf(current_frame_file, "<div class=\"event rect %s\">", shape_type);
+    fprintf(current_frame_file, "<div class=\"color-box\" style=\"background-color: rgba(%d,%d,%d,%g)\"></div>",
+            color.r, color.g, color.b, color.a / 255.0);
+    fprintf(current_frame_file, "%s at (%d,%d,%d,%d)",
+            shape_desc, r->x, r->y, r->w, r->h);
     fprintf(current_frame_file, "</div>\n");
     fflush(current_frame_file);
 }
