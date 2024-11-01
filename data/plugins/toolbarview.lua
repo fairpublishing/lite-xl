@@ -32,7 +32,8 @@ end
 
 
 function ToolbarView:update()
-  local dest_size = self.visible and self:get_height() or 0
+  self.tiles_height = self:get_height()
+  local dest_size = self.visible and self.tiles_height or 0
   if self.init_size then
     self.size.y = dest_size
     self.init_size = nil
