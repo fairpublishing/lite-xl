@@ -6,14 +6,101 @@
 #define WINDOW_HEIGHT 600
 #define ATLAS_WIDTH 256
 #define ATLAS_HEIGHT 256
+#define GLYPH_SIZE 32  // Size of each glyph cell
 
-// Structure to store atlas region coordinates
 typedef struct {
-    SDL_Rect source;      // Region in the atlas
-    SDL_Rect destination; // Where to render on screen
+    SDL_Rect source;
+    SDL_Rect destination;
 } AtlasRegion;
 
-// Function to create a simple pixel atlas
+// Function to draw a simple glyph representing letter 'A'
+void draw_glyph_A(SDL_Surface* surface, int x, int y, Uint32 color) {
+    SDL_Rect pixel;
+    pixel.w = 1;
+    pixel.h = 1;
+    
+    // Draw an 'A' shape (simplified 7x9 pixels)
+    int A_pattern[] = {
+        0,0,1,1,1,0,0,
+        0,1,0,0,0,1,0,
+        0,1,0,0,0,1,0,
+        0,1,0,0,0,1,0,
+        1,1,1,1,1,1,1,
+        1,0,0,0,0,0,1,
+        1,0,0,0,0,0,1,
+        1,0,0,0,0,0,1,
+        1,0,0,0,0,0,1
+    };
+    
+    for (int py = 0; py < 9; py++) {
+        for (int px = 0; px < 7; px++) {
+            if (A_pattern[py * 7 + px]) {
+                pixel.x = x + px + 4;  // Centered in glyph cell
+                pixel.y = y + py + 4;
+                SDL_FillRect(surface, &pixel, color);
+            }
+        }
+    }
+}
+
+// Function to draw a simple glyph representing letter 'B'
+void draw_glyph_B(SDL_Surface* surface, int x, int y, Uint32 color) {
+    SDL_Rect pixel;
+    pixel.w = 1;
+    pixel.h = 1;
+    
+    // Draw a 'B' shape (simplified 7x9 pixels)
+    int B_pattern[] = {
+        1,1,1,1,1,0,0,
+        1,0,0,0,0,1,0,
+        1,0,0,0,0,1,0,
+        1,1,1,1,1,0,0,
+        1,0,0,0,0,1,0,
+        1,0,0,0,0,1,0,
+        1,0,0,0,0,1,0,
+        1,0,0,0,0,1,0,
+        1,1,1,1,1,0,0
+    };
+    
+    for (int py = 0; py < 9; py++) {
+        for (int px = 0; px < 7; px++) {
+            if (B_pattern[py * 7 + px]) {
+                pixel.x = x + px + 4;
+                pixel.y = y + py + 4;
+                SDL_FillRect(surface, &pixel, color);
+            }
+        }
+    }
+}
+
+// Function to draw a simple glyph representing '+'
+void draw_glyph_plus(SDL_Surface* surface, int x, int y, Uint32 color) {
+    SDL_Rect pixel;
+    pixel.w = 1;
+    pixel.h = 1;
+    
+    // Draw a '+' shape (simplified 7x7 pixels)
+    int plus_pattern[] = {
+        0,0,0,1,0,0,0,
+        0,0,0,1,0,0,0,
+        0,0,0,1,0,0,0,
+        1,1,1,1,1,1,1,
+        0,0,0,1,0,0,0,
+        0,0,0,1,0,0,0,
+        0,0,0,1,0,0,0
+    };
+    
+    for (int py = 0; py < 7; py++) {
+        for (int px = 0; px < 7; px++) {
+            if (plus_pattern[py * 7 + px]) {
+                pixel.x = x + px + 4;
+                pixel.y = y + py + 4;
+                SDL_FillRect(surface, &pixel, color);
+            }
+        }
+    }
+}
+
 SDL_Surface* create_atlas(void) {
     SDL_Surface* atlas = SDL_CreateRGBSurface(0, ATLAS_WIDTH, ATLAS_HEIGHT, 32,
                                              0xFF000000,
@@ -25,40 +112,25 @@ SDL_Surface* create_atlas(void) {
         return NULL;
     }
 
-    // Fill atlas with some example patterns
-    SDL_Rect regions[] = {
-        {0, 0, 64, 64},     // Red square
-        {64, 0, 64, 64},    // Green square
-        {128, 0, 64, 64},   // Blue square
-        {0, 64, 128, 128}   // Checkered pattern
-    };
+    // Fill atlas with black background
+    SDL_FillRect(atlas, NULL, SDL_MapRGBA(atlas->format, 0, 0, 0, 255));
 
+    // Colors for our glyphs
     Uint32 colors[] = {
-        SDL_MapRGBA(atlas->format, 255, 0, 0, 255),    // Red
-        SDL_MapRGBA(atlas->format, 0, 255, 0, 255),    // Green
-        SDL_MapRGBA(atlas->format, 0, 0, 255, 255),    // Blue
-        SDL_MapRGBA(atlas->format, 255, 255, 255, 255) // White
+        SDL_MapRGBA(atlas->format, 255, 255, 255, 255),  // White
+        SDL_MapRGBA(atlas->format, 255, 255, 0, 255),    // Yellow
+        SDL_MapRGBA(atlas->format, 0, 255, 0, 255)       // Green
     };
 
-    // Fill the solid color regions
-    for (int i = 0; i < 3; i++) {
-        SDL_FillRect(atlas, &regions[i], colors[i]);
-    }
-
-    // Create checkered pattern
-    int checker_size = 16;
-    for (int y = 0; y < regions[3].h; y += checker_size) {
-        for (int x = 0; x < regions[3].w; x += checker_size) {
-            SDL_Rect checker = {
-                regions[3].x + x,
-                regions[3].y + y,
-                checker_size,
-                checker_size
-            };
-            Uint32 color = ((x / checker_size + y / checker_size) % 2) ? colors[3] : colors[0];
-            SDL_FillRect(atlas, &checker, color);
-        }
-    }
+    // Draw glyphs in different colors and positions
+    draw_glyph_A(atlas, 0, 0, colors[0]);          // White 'A' at (0,0)
+    draw_glyph_B(atlas, GLYPH_SIZE, 0, colors[1]); // Yellow 'B' at (32,0)
+    draw_glyph_plus(atlas, 0, GLYPH_SIZE, colors[2]); // Green '+' at (0,32)
+    
+    // Add more glyphs with different colors in a grid pattern
+    draw_glyph_A(atlas, GLYPH_SIZE*2, 0, colors[2]);        // Green 'A'
+    draw_glyph_B(atlas, GLYPH_SIZE*2, GLYPH_SIZE, colors[0]); // White 'B'
+    draw_glyph_plus(atlas, GLYPH_SIZE, GLYPH_SIZE, colors[1]); // Yellow '+'
 
     return atlas;
 }
@@ -69,7 +141,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    SDL_Window* window = SDL_CreateWindow("SDL Atlas Example",
+    SDL_Window* window = SDL_CreateWindow("SDL Atlas Example with Glyphs",
                                         SDL_WINDOWPOS_UNDEFINED,
                                         SDL_WINDOWPOS_UNDEFINED,
                                         WINDOW_WIDTH, WINDOW_HEIGHT,
@@ -90,7 +162,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Create our atlas
     SDL_Surface* atlas = create_atlas();
     if (!atlas) {
         SDL_DestroyRenderer(renderer);
@@ -117,21 +188,21 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Define regions to copy from atlas
-    AtlasRegion regions[] = {
-        // Red square
-        {{0, 0, 64, 64}, {50, 50, 64, 64}},
-        // Green square
-        {{64, 0, 64, 64}, {150, 150, 128, 128}},  // Note: scaled up
-        // Blue square
-        {{128, 0, 64, 64}, {300, 100, 64, 64}},
-        // Checkered pattern
-        {{0, 64, 128, 128}, {400, 200, 256, 256}} // Note: scaled up
-    };
-
     // Fill background with dark gray
     SDL_FillRect(compose_surface, NULL,
-                SDL_MapRGB(compose_surface->format, 64, 64, 64));
+                SDL_MapRGB(compose_surface->format, 32, 32, 32));
+
+    // Define regions to copy from atlas (each glyph is 32x32)
+    AtlasRegion regions[] = {
+        // White 'A'
+        {{0, 0, GLYPH_SIZE, GLYPH_SIZE}, {50, 50, GLYPH_SIZE*2, GLYPH_SIZE*2}},
+        // Yellow 'B'
+        {{GLYPH_SIZE, 0, GLYPH_SIZE, GLYPH_SIZE}, {150, 150, GLYPH_SIZE, GLYPH_SIZE}},
+        // Green '+'
+        {{0, GLYPH_SIZE, GLYPH_SIZE, GLYPH_SIZE}, {300, 100, GLYPH_SIZE*3, GLYPH_SIZE*3}},
+        // Green 'A'
+        {{GLYPH_SIZE*2, 0, GLYPH_SIZE, GLYPH_SIZE}, {400, 200, GLYPH_SIZE, GLYPH_SIZE}}
+    };
 
     // Copy regions from atlas to compose surface
     for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
