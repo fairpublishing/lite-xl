@@ -1,107 +1,53 @@
 #include <SDL.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
-#define ATLAS_WIDTH 256
-#define ATLAS_HEIGHT 256
-#define GLYPH_SIZE 32  // Size of each glyph cell
+#define ATLAS_WIDTH 512
+#define ATLAS_HEIGHT 512
+#define FONT_SIZE 32
 
 typedef struct {
     SDL_Rect source;
     SDL_Rect destination;
 } AtlasRegion;
 
-// Function to draw a simple glyph representing letter 'A'
-void draw_glyph_A(SDL_Surface* surface, int x, int y, Uint32 color) {
-    SDL_Rect pixel;
-    pixel.w = 1;
-    pixel.h = 1;
-    
-    // Draw an 'A' shape (simplified 7x9 pixels)
-    int A_pattern[] = {
-        0,0,1,1,1,0,0,
-        0,1,0,0,0,1,0,
-        0,1,0,0,0,1,0,
-        0,1,0,0,0,1,0,
-        1,1,1,1,1,1,1,
-        1,0,0,0,0,0,1,
-        1,0,0,0,0,0,1,
-        1,0,0,0,0,0,1,
-        1,0,0,0,0,0,1
-    };
-    
-    for (int py = 0; py < 9; py++) {
-        for (int px = 0; px < 7; px++) {
-            if (A_pattern[py * 7 + px]) {
-                pixel.x = x + px + 4;  // Centered in glyph cell
-                pixel.y = y + py + 4;
-                SDL_FillRect(surface, &pixel, color);
-            }
+// Function to render a glyph to the atlas surface
+SDL_bool render_glyph(FT_Face face, char c, SDL_Surface* atlas, int x, int y) {
+    if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+        printf("Failed to load glyph '%c'\n", c);
+        return SDL_FALSE;
+    }
+
+    FT_GlyphSlot slot = face->glyph;
+    FT_Bitmap* bitmap = &slot->bitmap;
+
+    // For each pixel in the glyph bitmap
+    for (unsigned int row = 0; row < bitmap->rows; row++) {
+        for (unsigned int col = 0; col < bitmap->width; col++) {
+            unsigned char pixel = bitmap->buffer[row * bitmap->pitch + col];
+            
+            // Convert grayscale value to SDL color
+            Uint32 color = SDL_MapRGBA(atlas->format, pixel, pixel, pixel, pixel);
+            
+            SDL_Rect pixel_rect = {
+                x + col,
+                y + row,
+                1,
+                1
+            };
+            
+            SDL_FillRect(atlas, &pixel_rect, color);
         }
     }
+    
+    return SDL_TRUE;
 }
 
-// Function to draw a simple glyph representing letter 'B'
-void draw_glyph_B(SDL_Surface* surface, int x, int y, Uint32 color) {
-    SDL_Rect pixel;
-    pixel.w = 1;
-    pixel.h = 1;
-    
-    // Draw a 'B' shape (simplified 7x9 pixels)
-    int B_pattern[] = {
-        1,1,1,1,1,0,0,
-        1,0,0,0,0,1,0,
-        1,0,0,0,0,1,0,
-        1,1,1,1,1,0,0,
-        1,0,0,0,0,1,0,
-        1,0,0,0,0,1,0,
-        1,0,0,0,0,1,0,
-        1,0,0,0,0,1,0,
-        1,1,1,1,1,0,0
-    };
-    
-    for (int py = 0; py < 9; py++) {
-        for (int px = 0; px < 7; px++) {
-            if (B_pattern[py * 7 + px]) {
-                pixel.x = x + px + 4;
-                pixel.y = y + py + 4;
-                SDL_FillRect(surface, &pixel, color);
-            }
-        }
-    }
-}
-
-// Function to draw a simple glyph representing '+'
-void draw_glyph_plus(SDL_Surface* surface, int x, int y, Uint32 color) {
-    SDL_Rect pixel;
-    pixel.w = 1;
-    pixel.h = 1;
-    
-    // Draw a '+' shape (simplified 7x7 pixels)
-    int plus_pattern[] = {
-        0,0,0,1,0,0,0,
-        0,0,0,1,0,0,0,
-        0,0,0,1,0,0,0,
-        1,1,1,1,1,1,1,
-        0,0,0,1,0,0,0,
-        0,0,0,1,0,0,0,
-        0,0,0,1,0,0,0
-    };
-    
-    for (int py = 0; py < 7; py++) {
-        for (int px = 0; px < 7; px++) {
-            if (plus_pattern[py * 7 + px]) {
-                pixel.x = x + px + 4;
-                pixel.y = y + py + 4;
-                SDL_FillRect(surface, &pixel, color);
-            }
-        }
-    }
-}
-
-SDL_Surface* create_atlas(void) {
+SDL_Surface* create_atlas(FT_Face face) {
     SDL_Surface* atlas = SDL_CreateRGBSurface(0, ATLAS_WIDTH, ATLAS_HEIGHT, 32,
                                              0xFF000000,
                                              0x00FF0000,
@@ -112,25 +58,28 @@ SDL_Surface* create_atlas(void) {
         return NULL;
     }
 
-    // Fill atlas with black background
-    SDL_FillRect(atlas, NULL, SDL_MapRGBA(atlas->format, 0, 0, 0, 255));
+    // Fill atlas with transparent black
+    SDL_FillRect(atlas, NULL, SDL_MapRGBA(atlas->format, 0, 0, 0, 0));
 
-    // Colors for our glyphs
-    Uint32 colors[] = {
-        SDL_MapRGBA(atlas->format, 255, 255, 255, 255),  // White
-        SDL_MapRGBA(atlas->format, 255, 255, 0, 255),    // Yellow
-        SDL_MapRGBA(atlas->format, 0, 255, 0, 255)       // Green
-    };
+    // Set the font size
+    FT_Set_Pixel_Sizes(face, 0, FONT_SIZE);
 
-    // Draw glyphs in different colors and positions
-    draw_glyph_A(atlas, 0, 0, colors[0]);          // White 'A' at (0,0)
-    draw_glyph_B(atlas, GLYPH_SIZE, 0, colors[1]); // Yellow 'B' at (32,0)
-    draw_glyph_plus(atlas, 0, GLYPH_SIZE, colors[2]); // Green '+' at (0,32)
-    
-    // Add more glyphs with different colors in a grid pattern
-    draw_glyph_A(atlas, GLYPH_SIZE*2, 0, colors[2]);        // Green 'A'
-    draw_glyph_B(atlas, GLYPH_SIZE*2, GLYPH_SIZE, colors[0]); // White 'B'
-    draw_glyph_plus(atlas, GLYPH_SIZE, GLYPH_SIZE, colors[1]); // Yellow '+'
+    // Render some sample characters
+    const char* chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    int x = 0, y = 0;
+    int max_height = FONT_SIZE;
+
+    for (const char* p = chars; *p; p++) {
+        if (x + FONT_SIZE >= ATLAS_WIDTH) {
+            x = 0;
+            y += max_height;
+            if (y + max_height >= ATLAS_HEIGHT) break;
+        }
+
+        if (render_glyph(face, *p, atlas, x, y)) {
+            x += FONT_SIZE;
+        }
+    }
 
     return atlas;
 }
@@ -138,6 +87,23 @@ SDL_Surface* create_atlas(void) {
 int main(int argc, char* argv[]) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Initialize FreeType
+    FT_Library ft_library;
+    if (FT_Init_FreeType(&ft_library)) {
+        printf("Could not initialize FreeType\n");
+        SDL_Quit();
+        return 1;
+    }
+
+    // Load the font
+    FT_Face face;
+    if (FT_New_Face(ft_library, "data/fonts/FiraSans-Regular.ttf", 0, &face)) {
+        printf("Could not load font\n");
+        FT_Done_FreeType(ft_library);
+        SDL_Quit();
         return 1;
     }
 
@@ -162,7 +128,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    SDL_Surface* atlas = create_atlas();
+    SDL_Surface* atlas = create_atlas(face);
     if (!atlas) {
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
@@ -195,13 +161,13 @@ int main(int argc, char* argv[]) {
     // Define regions to copy from atlas (each glyph is 32x32)
     AtlasRegion regions[] = {
         // White 'A'
-        {{0, 0, GLYPH_SIZE, GLYPH_SIZE}, {50, 50, GLYPH_SIZE*2, GLYPH_SIZE*2}},
+        {{0, 0, FONT_SIZE, FONT_SIZE}, {50, 50, FONT_SIZE*2, FONT_SIZE*2}},
         // Yellow 'B'
-        {{GLYPH_SIZE, 0, GLYPH_SIZE, GLYPH_SIZE}, {150, 150, GLYPH_SIZE, GLYPH_SIZE}},
+        {{FONT_SIZE, 0, FONT_SIZE, FONT_SIZE}, {150, 150, FONT_SIZE, FONT_SIZE}},
         // Green '+'
-        {{0, GLYPH_SIZE, GLYPH_SIZE, GLYPH_SIZE}, {300, 100, GLYPH_SIZE*3, GLYPH_SIZE*3}},
+        {{0, FONT_SIZE, FONT_SIZE, FONT_SIZE}, {300, 100, FONT_SIZE*3, FONT_SIZE*3}},
         // Green 'A'
-        {{GLYPH_SIZE*2, 0, GLYPH_SIZE, GLYPH_SIZE}, {400, 200, GLYPH_SIZE, GLYPH_SIZE}}
+        {{FONT_SIZE*2, 0, FONT_SIZE, FONT_SIZE}, {400, 200, FONT_SIZE, FONT_SIZE}}
     };
 
     // Copy regions from atlas to compose surface
@@ -244,7 +210,10 @@ int main(int argc, char* argv[]) {
     SDL_FreeSurface(atlas);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    // Cleanup FreeType
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft_library);
+    
     SDL_Quit();
-
     return 0;
 }
