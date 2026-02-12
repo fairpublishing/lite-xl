@@ -20,15 +20,25 @@
 
 static SDL_Window *window;
 
-static double get_scale(void) {
-#ifndef __APPLE__
+static double get_scale(SDL_Window *window) {
+#ifdef _WIN32
   float dpi;
-  if (SDL_GetDisplayDPI(0, NULL, &dpi, NULL) == 0)
+  if (SDL_GetDisplayDPI(0, NULL, &dpi, NULL) == 0) {
+    fprintf(stderr, "DEBUG: using SDL_GetDisplayDPI: %g\n", dpi);
     return dpi / 96.0;
+  }
+#elif !defined(__APPLE__)
+  /* On systems using Wayland this seems to be the correct method to get the scaling. */
+  int win_w, win_h, draw_w, draw_h;
+  SDL_GetWindowSize(window, &win_w, &win_h);
+  SDL_GL_GetDrawableSize(window, &draw_w, &draw_h);
+  /* We ignore the other ratio, draw_h / win_h, which is normally equal to the
+   * ratio using the width. */
+  return (double)draw_w / (double)win_w;
 #endif
+  fprintf(stderr, "DEBUG: falling back to no DPI\n");
   return 1.0;
 }
-
 
 static void get_exe_filename(char *buf, int sz) {
 #if _WIN32
@@ -203,7 +213,7 @@ init_lua:
   lua_pushstring(L, LITE_ARCH_TUPLE);
   lua_setglobal(L, "ARCH");
 
-  lua_pushnumber(L, get_scale());
+  lua_pushnumber(L, get_scale(window));
   lua_setglobal(L, "SCALE");
 
   char exename[2048];
