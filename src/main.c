@@ -24,7 +24,6 @@ static double get_scale(SDL_Window *window) {
 #ifdef _WIN32
   float dpi;
   if (SDL_GetDisplayDPI(0, NULL, &dpi, NULL) == 0) {
-    fprintf(stderr, "DEBUG: using SDL_GetDisplayDPI: %g\n", dpi);
     return dpi / 96.0;
   }
 #elif !defined(__APPLE__)
@@ -36,7 +35,6 @@ static double get_scale(SDL_Window *window) {
    * ratio using the width. */
   return (double)draw_w / (double)win_w;
 #endif
-  fprintf(stderr, "DEBUG: falling back to no DPI\n");
   return 1.0;
 }
 
