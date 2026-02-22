@@ -11,6 +11,8 @@
 #ifdef _WIN32
   #include <direct.h>
   #include <windows.h>
+  #include <io.h>
+  #include <fcntl.h>
   #include <fileapi.h>
   #include "../utfconv.h"
 
@@ -1126,6 +1128,88 @@ static int f_path_compare(lua_State *L) {
   return 1;
 }
 
+#ifdef _WIN32
+
+/* Close function for the Lua file handle */
+static int f_shared_fclose(lua_State *L) {
+  luaL_Stream *p = (luaL_Stream *)luaL_checkudata(L, 1, LUA_FILEHANDLE);
+  int ok = (fclose(p->f) == 0);
+  p->f = NULL;
+  return luaL_fileresult(L, ok, NULL);
+}
+
+/*
+ * * open_shared(filename [, mode])
+ **
+ ** Opens a file with FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE.
+ ** Returns a standard Lua file handle compatible with :lines(), :read(), :close().
+ */
+static int f_open_shared(lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  const char *mode     = luaL_optstring(L, 2, "rb");
+
+  if (mode[0] != 'r') {
+    return luaL_error(L, "attempt to use open_shared in write mode");
+  }
+
+  /* ---- Convert UTF-8 filename to UTF-16 for CreateFileW ---- */
+  int wlen = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+  if (wlen == 0) {
+    _dosmaperr(GetLastError());
+    return luaL_fileresult(L, 0, filename);
+  }
+
+  wchar_t *wfilename = (wchar_t *)malloc(wlen * sizeof(wchar_t));
+  if (!wfilename)
+    return luaL_fileresult(L, 0, filename);
+
+  if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, wlen) == 0) {
+    _dosmaperr(GetLastError());
+    free(wfilename);
+    return luaL_fileresult(L, 0, filename);
+  }
+
+  /* ---- Open with full sharing ---- */
+  HANDLE hFile = CreateFileW(
+    wfilename,
+    GENERIC_READ,
+    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+    NULL,
+    OPEN_EXISTING,
+    FILE_ATTRIBUTE_NORMAL,
+    NULL
+  );
+  free(wfilename);
+
+  if (hFile == INVALID_HANDLE_VALUE) {
+    _dosmaperr(GetLastError());  /* maps GetLastError() → errno */
+    return luaL_fileresult(L, 0, filename);
+  }
+
+  /* ---- HANDLE → fd → FILE* ---- */
+  int fd = _open_osfhandle((intptr_t)hFile, _O_RDONLY | _O_BINARY);
+  if (fd == -1) {
+    CloseHandle(hFile);
+    return luaL_fileresult(L, 0, filename);
+  }
+
+  FILE *fp = _fdopen(fd, mode);
+  if (!fp) {
+    _close(fd);  /* also closes hFile */
+    return luaL_fileresult(L, 0, filename);
+  }
+
+  /* ---- Create a standard Lua file handle (luaL_Stream) ---- */
+  luaL_Stream *p = (luaL_Stream *)lua_newuserdatauv(L, sizeof(luaL_Stream), 0);
+  p->closef = NULL;                           /* mark as closed initially */
+  luaL_setmetatable(L, LUA_FILEHANDLE);       /* set the io metatable     */
+  p->f      = fp;
+  p->closef = f_shared_fclose;
+
+  return 1;  /* return the file handle */
+}
+
+#endif /* _WIN32 */
 
 static const luaL_Reg lib[] = {
   { "poll_event",          f_poll_event          },
@@ -1160,6 +1244,9 @@ static const luaL_Reg lib[] = {
   { "load_native_plugin",  f_load_native_plugin  },
   { "path_compare",        f_path_compare        },
   { "get_fs_type",         f_get_fs_type         },
+#ifdef _WIN32
+  { "open_shared",         f_open_shared         },
+#endif
   { NULL, NULL }
 };
 

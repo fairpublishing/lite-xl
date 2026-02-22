@@ -65,7 +65,8 @@ end
 
 
 function Doc:load(filename)
-  local fp = assert( io.open(filename, "rb") )
+  local open_shared = system.open_shared or io.open
+  local fp = assert( open_shared(filename, "rb") )
   self:reset()
   self.lines = {}
   local i = 1
